@@ -1,3 +1,5 @@
+"""Tools for fitting PARRM filters to data."""
+
 from copy import deepcopy
 
 import numpy as np
@@ -282,11 +284,11 @@ class PARRM:
         n_waves: int,
     ):
         """"""
-        angle = data * (2 * np.pi / period)
+        angles = data * (2 * np.pi / period)
         waves = np.ones((data.shape[0], 2 * n_waves))
         for wave_idx in range(n_waves):
-            waves[:, 2 * wave_idx] = np.sin(wave_idx * angle)
-            waves[:, 2 * wave_idx + 1] = np.cos(wave_idx * angle)
+            waves[:, 2 * wave_idx] = np.sin(wave_idx * angles)
+            waves[:, 2 * wave_idx + 1] = np.cos(wave_idx * angles)
 
         beta = np.linalg.solve((waves.T @ waves), waves.T @ indices)
         residuals = indices - waves * beta
@@ -394,11 +396,14 @@ class PARRM:
     def filter_data(self) -> np.ndarray:
         """Apply the PARRM filter to the data and return it."""
         return (
-            convolve2d(self._data, np.rot90(self._filter), mode="same")
-            - self._data
+            convolve2d(self._data, np.rot90(self._filter), "same") - self._data
         ) / (
             1
-            - (convolve2d(self._data, np.ones_like(self._data), "same"))
+            - (
+                convolve2d(
+                    self._data, np.rot90(np.ones_like(self._data)), "same"
+                )
+            )
             + self._data
         )
 
