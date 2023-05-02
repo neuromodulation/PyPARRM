@@ -1,0 +1,13 @@
+pytest
+flake8
+black
+codespell
+pydocstyle
+pycodestyle
+sphinx
+numpydoc
+nbsphinx
+nbsphinx_link
+sphinxcontrib-bibtex
+sphinx-gallery
+pydata-sphinx-theme

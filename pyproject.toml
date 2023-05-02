@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyparrm"
+version = "0.0.1dev"
+authors = [
+    { name="Thomas Samuel Binns", email="t.s.binns@outlook.com" }
+]
+description = "A Python port of the PARRM method for stimulation artefact removal."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+
+dependencies = [
+    "numpy"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "flake8",
+    "black",
+    "codespell",
+    "pydocstyle",
+    "pycodestyle",
+    "sphinx",
+    "numpydoc",
+    "nbsphinx",
+    "nbsphinx_link",
+    "sphinxcontrib-bibtex",
+    "sphinx-gallery",
+    "pydata-sphinx-theme"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/icneuromodulation/PyPARRM"
+"Bug Tracker" = "https://github.com/icneuromodulation/PyPARRM/issues"
