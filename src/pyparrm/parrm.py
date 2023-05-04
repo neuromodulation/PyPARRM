@@ -14,7 +14,7 @@ class PARRM:
     _data_standard = None
 
     samp_freq = None
-    stim_freq = None
+    artefact_freq = None
     verbose = None
 
     _period = None
@@ -33,17 +33,17 @@ class PARRM:
         self,
         data: np.ndarray,
         samp_freq: int | float,
-        stim_freq: int | float,
+        artefact_freq: int | float,
         verbose: bool = True,
     ) -> None:  # noqa D107
-        self._check_init_inputs(data, samp_freq, stim_freq, verbose)
+        self._check_init_inputs(data, samp_freq, artefact_freq, verbose)
         (self._n_chans, self._n_samples) = self._data.shape
 
     def _check_init_inputs(
         self,
         data: np.ndarray,
         samp_freq: int | float,
-        stim_freq: int | float,
+        artefact_freq: int | float,
         verbose: bool,
     ) -> None:
         """Check initialisation inputs to object."""
@@ -57,9 +57,11 @@ class PARRM:
             raise TypeError("`samp_freq` must be an int or a float.")
         self.samp_freq = deepcopy(samp_freq)
 
-        if not isinstance(stim_freq, int) and not isinstance(stim_freq, float):
-            raise TypeError("`stim_freq` must be an int or a float.")
-        self.stim_freq = deepcopy(stim_freq)
+        if not isinstance(artefact_freq, int) and not isinstance(
+            artefact_freq, float
+        ):
+            raise TypeError("`artefact_freq` must be an int or a float.")
+        self.artefact_freq = deepcopy(artefact_freq)
 
         if not isinstance(verbose, bool):
             raise TypeError("`verbose` must be a bool.")
@@ -105,7 +107,7 @@ class PARRM:
                 "`assumed_periods` must be an int, a float, a tuple, or None."
             )
         if assumed_periods is None:
-            assumed_periods = tuple([self.samp_freq / self.stim_freq])
+            assumed_periods = tuple([self.samp_freq / self.artefact_freq])
         elif isinstance(assumed_periods, (int, float)):
             assumed_periods = tuple([assumed_periods])
         elif not all(
@@ -128,16 +130,10 @@ class PARRM:
 
     def _standardise_data(self) -> None:
         """Standardise data to have S.D. of 1 and clipped outliers."""
-        outlier_boundaries = np.full((self._n_chans,), self.outlier_boundary)
-
         standard_data = np.diff(self._data, axis=1)  # derivatives of data
         standard_data /= np.mean(np.abs(standard_data), axis=1)  # S.D. == 1
-        standard_data = np.max(
-            (
-                np.min((standard_data, outlier_boundaries), axis=1),
-                outlier_boundaries * -1,
-            ),
-            axis=1,
+        standard_data = np.clip(
+            standard_data, -self.outlier_boundary, self.outlier_boundary
         )  # clip outliers
 
         self._data_standard = standard_data
@@ -146,14 +142,19 @@ class PARRM:
         """Optimise signal period."""
         random_state = np.random.RandomState(self.random_seed)
 
+        stim_period = np.nan
+
         opt_sample_lens = np.unique(
-            [np.min(self._n_samples, length) for length in [5e3, 1e4, 2.5e4]]
+            [
+                int(np.min((self.search_samples.shape[0], length)))
+                for length in [5000, 10000, 25000]
+            ]
         )
         ignore_sample_portions = [0.0, 0.0, 0.95]
         bandwidths = [5, 10, 20]
         lambda_ = 1.0
 
-        run_idx = 0
+        run_idx = 1
         for use_n_samples, ignore_portion, bandwidth in zip(
             opt_sample_lens, ignore_sample_portions, bandwidths
         ):
@@ -164,42 +165,70 @@ class PARRM:
             periods = []
             for assumed_period in self.assumed_periods:
                 periods.extend(
-                    [
-                        assumed_period
-                        * (1 + np.arange(-1e-2, 1e-2, 1e-4) / run_idx),
-                        assumed_period
-                        * (1 + np.arange(-1e-3, 1e-3, 1e-5) / run_idx),
-                    ]
+                    np.concatenate(
+                        (
+                            assumed_period
+                            * (
+                                1
+                                + np.arange(-1e-2, 1e-2 + 1e-4, 1e-4) / run_idx
+                            ),
+                            assumed_period
+                            * (
+                                1
+                                + np.arange(-1e-3, 1e-3 + 1e-5, 1e-5) / run_idx
+                            ),
+                        )
+                    )
                 )
             periods = np.unique(periods)
 
-            v = np.zeros_like(periods)
+            v = np.full_like(periods, fill_value=np.inf)
+            valid = False
             for period_idx, period in enumerate(periods):
-                v[period_idx] = self._optimise_local(
+                output = self._optimise_local(
                     period,
                     self._data_standard,
                     use_idcs,
-                    np.min(bandwidth, use_idcs.shape[0] // 4),
+                    np.min((bandwidth, use_idcs.shape[0] // 4)),
                     lambda_,
                 )
-            v_idcs = v.argsort()
-            v = v[v_idcs]
-            periods = periods[v_idcs]
+                if not isinstance(output, np.linalg.LinAlgError):
+                    v[period_idx] = output
+                    valid = True
 
-            for j in range(np.min(5, periods.shape[0])):
-                periods[j], v[j] = fmin(
-                    self._optimise_local,
-                    periods[j],
-                    (
-                        self._data_standard,
-                        use_idcs,
-                        np.min(bandwidth, use_idcs.shape[0] // 4),
-                        lambda_,
-                    ),
-                    disp=False,
-                )
+            if valid:
+                v_idcs = v.argsort()
+                v = v[v_idcs]
+                periods = periods[v_idcs[v != np.inf]]  # ignore invalid `v`s
+                if periods.shape == (0,):  # if no valid periods
+                    raise ValueError(
+                        "The period cannot be estimated from the data. Check "
+                        "that your data does not contain NaNs."
+                    )
 
-            stim_period = periods[v.argmin()]
+                for iter_idx in range(np.min((5, periods.shape[0]))):
+                    periods[iter_idx], v[iter_idx], _, _, _ = fmin(
+                        self._optimise_local,
+                        periods[iter_idx],
+                        (
+                            self._data_standard,
+                            use_idcs,
+                            np.min((bandwidth, use_idcs.shape[0] // 4)),
+                            lambda_,
+                        ),
+                        full_output=True,
+                        disp=False,
+                    )
+
+                stim_period = periods[v.argmin()]
+
+            run_idx += 1
+
+        if np.isnan(stim_period):
+            raise ValueError(
+                "The period cannot be estimated from the data. Check that "
+                "your data does not contain NaNs."
+            )
 
         self._period = fmin(
             self._optimise_local,
@@ -207,11 +236,11 @@ class PARRM:
             (
                 self._data_standard,
                 use_idcs,
-                np.min(bandwidth, use_idcs.shape[0] // 4),
+                np.min((bandwidths[run_idx - 2], use_idcs.shape[0] // 4)),
                 0.0,
             ),
             disp=False,
-        )
+        )[0]
 
     def _get_centre_indices(
         self,
@@ -220,33 +249,27 @@ class PARRM:
         random_state: np.random.RandomState,
     ) -> np.ndarray:
         """Get indices for samples in the centre of the data segment."""
-        start_idx = np.ceil(
-            self.search_samples[0]
-            + self.search_samples[1]
-            - use_n_samples / 2.0
-        )
-        end_idx = np.floor(
-            self.search_samples[0]
-            + self.search_samples[1]
-            + use_n_samples / 2.0
-        )
+        sample_range = self.search_samples[0] + self.search_samples[-1]
+        start_idx = int(np.ceil((sample_range - use_n_samples) / 2))
+        end_idx = int(np.floor((sample_range + use_n_samples) / 2))
+
         if self._n_samples * ignore_portion < end_idx - start_idx:
-            return np.arange(start_idx, end_idx)
-        else:
-            start_idx = self.search_samples[0] + np.floor(
-                (1.0 - ignore_portion) / 2.0 * self._n_samples
+            return np.arange(start_idx, end_idx + 1)
+
+        start_idx = self.search_samples[0] + np.floor(
+            (1.0 - ignore_portion) / 2.0 * self._n_samples
+        )
+        end_idx = self.search_samples[1] - np.ceil(
+            (1.0 - ignore_portion) / 2.0 * self._n_samples
+        )
+        return np.unique(
+            random_state.randint(
+                0,
+                end_idx - start_idx,
+                np.min(use_n_samples, end_idx - start_idx),
             )
-            end_idx = self.search_samples[1] - np.ceil(
-                (1.0 - ignore_portion) / 2.0 * self._n_samples
-            )
-            return np.unique(
-                random_state.randint(
-                    0,
-                    end_idx - start_idx,
-                    np.min(use_n_samples, end_idx - start_idx),
-                )
-                + start_idx
-            )
+            + start_idx
+        )
 
     def _optimise_local(
         self,
@@ -265,16 +288,19 @@ class PARRM:
         """
         f = 0
 
-        s = np.arange(2 * bandwidth + 1)
+        s = np.arange(1, 2 * bandwidth + 2)
         s = lambda_ * s / s.sum()
 
         for data_chan in data:
-            residuals, beta = self._fit_sinusoids_to_data(
+            output = self._fit_sinusoids_to_data(
                 data_chan[indices], indices, period, bandwidth
             )
-            f += residuals.mean() + s @ beta
+            if isinstance(output, np.linalg.LinAlgError):
+                return output
 
-        return f.mean(axis=0)
+            f += output[0].mean() + s @ output[1]
+
+        return f / self._n_chans
 
     def _fit_sinusoids_to_data(
         self,
@@ -284,14 +310,18 @@ class PARRM:
         n_waves: int,
     ):
         """"""
-        angles = data * (2 * np.pi / period)
-        waves = np.ones((data.shape[0], 2 * n_waves))
-        for wave_idx in range(n_waves):
-            waves[:, 2 * wave_idx] = np.sin(wave_idx * angles)
-            waves[:, 2 * wave_idx + 1] = np.cos(wave_idx * angles)
+        angles = (indices + 1) * (2 * np.pi / period)
+        waves = np.ones((data.shape[0], 2 * n_waves + 1))
+        for wave_idx in range(1, n_waves + 1):
+            waves[:, 2 * wave_idx - 1] = np.sin(wave_idx * angles)
+            waves[:, 2 * wave_idx] = np.cos(wave_idx * angles)
 
-        beta = np.linalg.solve((waves.T @ waves), waves.T @ indices)
-        residuals = indices - waves * beta
+        try:  # ignores LinAlgError for singular matrices
+            beta = np.linalg.solve(waves.T @ waves, waves.T @ data)
+        except np.linalg.LinAlgError as error:
+            return error
+
+        residuals = data - waves @ beta
 
         return residuals**2, beta**2
 
