@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name="pyparrm",
-    version="dev0.0.1",
+    version="0.0.1dev",
     package_dir={"": "src/"},
-    packages=["pyparrm"],
+    packages=["pyparrm.parrm"],
 )

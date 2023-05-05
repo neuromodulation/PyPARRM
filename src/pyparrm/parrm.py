@@ -8,41 +8,72 @@ from scipy.signal import convolve2d
 
 
 class PARRM:
-    """"""
+    """Class for removing stimulation artefacts from data using PARRM.
+
+    The Period-based Artefact Reconstruction and Removal Method (PARRM) is
+    described in Dastin-van Rijn *et al.* (2021) :footcite:`DastinEtAl2021`.
+    PARRM assumes that the artefacts are semi-regular, periodic, and linearly
+    combined with the signal of interest.
+
+    The methods should be called in the following order:
+        1. :meth:`find_period`
+        2. :meth:`create_filter`
+        3. :meth:`filter_data`
+
+    Parameters
+    ----------
+    data : numpy.ndarray, shape of (channels, times)
+        Time-series from which stimulation artefacts should be identified and
+        removed.
+
+    sampling_freq : int | float
+        Sampling frequency of :attr:`data`, in Hz.
+
+    artefact_freq : int | float
+        Frequency of the stimulation artefact in :attr:`data`, in Hz.
+
+    verbose : bool (default True)
+        Whether or not to print information about the status of the processing.
+
+    References
+    ----------
+    .. footbibliography::
+    """
 
     _data = None
-    _data_standard = None
+    _standard_data = None
+    _filtered_data = None
 
-    samp_freq = None
-    artefact_freq = None
-    verbose = None
+    _sampling_freq = None
+    _artefact_freq = None
+    _verbose = None
 
     _period = None
-    search_samples = None
-    assumed_periods = None
-    outlier_boundary = None
-    random_seed = None
+    _search_samples = None
+    _assumed_periods = None
+    _outlier_boundary = None
+    _random_seed = None
 
     _filter = None
-    sample_window_size = None
-    skip_n_samples = None
-    filter_direction = None
-    period_window_size = None
+    _filter_half_width = None
+    _omit_n_samples = None
+    _filter_direction = None
+    _period_half_width = None
 
     def __init__(
         self,
         data: np.ndarray,
-        samp_freq: int | float,
+        sampling_freq: int | float,
         artefact_freq: int | float,
         verbose: bool = True,
     ) -> None:  # noqa D107
-        self._check_init_inputs(data, samp_freq, artefact_freq, verbose)
+        self._check_init_inputs(data, sampling_freq, artefact_freq, verbose)
         (self._n_chans, self._n_samples) = self._data.shape
 
     def _check_init_inputs(
         self,
         data: np.ndarray,
-        samp_freq: int | float,
+        sampling_freq: int | float,
         artefact_freq: int | float,
         verbose: bool,
     ) -> None:
@@ -53,19 +84,21 @@ class PARRM:
             raise ValueError("`data` must be a 2D array.")
         self._data = data.copy()
 
-        if not isinstance(samp_freq, int) and not isinstance(samp_freq, float):
-            raise TypeError("`samp_freq` must be an int or a float.")
-        self.samp_freq = deepcopy(samp_freq)
+        if not isinstance(sampling_freq, int) and not isinstance(
+            sampling_freq, float
+        ):
+            raise TypeError("`sampling_freq` must be an int or a float.")
+        self._sampling_freq = deepcopy(sampling_freq)
 
         if not isinstance(artefact_freq, int) and not isinstance(
             artefact_freq, float
         ):
             raise TypeError("`artefact_freq` must be an int or a float.")
-        self.artefact_freq = deepcopy(artefact_freq)
+        self._artefact_freq = deepcopy(artefact_freq)
 
         if not isinstance(verbose, bool):
             raise TypeError("`verbose` must be a bool.")
-        self.verbose = deepcopy(verbose)
+        self._verbose = deepcopy(verbose)
 
     def find_period(
         self,
@@ -74,13 +107,58 @@ class PARRM:
         outlier_boundary: int | float = 3.0,
         random_seed: int | None = None,
     ) -> None:
-        """Find the period of the stimulation artefacts."""
+        """Find the period of the artefacts.
+
+        Parameters
+        ----------
+        search_samples : numpy.ndarray | None (default None), shape of (times)
+            Samples of :attr:`data` to use when finding the artefact period. If
+            ``None``, all samples are used.
+
+        assumed_periods : int | float | tuple[int or float] | None (default None)
+            Guess(es) of the artefact period. If ``None``, the period is
+            assumed to be ``sampling_freq`` / ``artefact_freq``.
+
+        outlier_boundary : int | float (default 3.0)
+            Boundary (in standard deviation) to consider outlier values in
+            :attr:`data`.
+
+        random_seed: int | None (default None)
+            Seed to use when generating indices of samples to search for the
+            period. Only used if the number of available samples is less than
+            the number of requested samples.
+        """  # noqa E501
+        if self._verbose:
+            print("\nFinding the artefact period...")
+
+        self._reset_result_attrs()
+
         self._check_sort_find_stim_period_inputs(
             search_samples, assumed_periods, outlier_boundary, random_seed
         )
 
         self._standardise_data()
-        self._optimise_period()
+        self._optimise_period_estimate()
+
+        if self._verbose:
+            print("    ... Artefact period found\n")
+
+    def _reset_result_attrs(self) -> None:
+        """Reset result attributes for when period recalculated."""
+        self._standard_data = None
+        self._filtered_data = None
+
+        self._period = None
+        self._search_samples = None
+        self._assumed_periods = None
+        self._outlier_boundary = None
+        self._random_seed = None
+
+        self._filter = None
+        self._filter_half_width = None
+        self._omit_n_samples = None
+        self._filter_direction = None
+        self._period_half_width = None
 
     def _check_sort_find_stim_period_inputs(
         self,
@@ -95,10 +173,16 @@ class PARRM:
         ):
             raise TypeError("`search_samples` must be a NumPy array or None.")
         if search_samples is None:
-            search_samples = np.arange(self._data.shape[1])
+            search_samples = np.arange(self._n_samples - 1)
         elif search_samples.ndim != 1:
             raise ValueError("`search_samples` must be a 1D array.")
-        self.search_samples = search_samples.copy()
+        search_samples = np.sort(search_samples)
+        if search_samples[0] < 0 or search_samples[-1] >= self._n_samples:
+            raise ValueError(
+                "Entries of `search_samples` must lie in the range [0, "
+                "n_samples)."
+            )
+        self._search_samples = search_samples.copy()
 
         if assumed_periods is not None and not isinstance(
             assumed_periods, (int, float, tuple)
@@ -107,7 +191,9 @@ class PARRM:
                 "`assumed_periods` must be an int, a float, a tuple, or None."
             )
         if assumed_periods is None:
-            assumed_periods = tuple([self.samp_freq / self.artefact_freq])
+            assumed_periods = tuple(
+                [self._sampling_freq / self._artefact_freq]
+            )
         elif isinstance(assumed_periods, (int, float)):
             assumed_periods = tuple([assumed_periods])
         elif not all(
@@ -117,36 +203,36 @@ class PARRM:
                 "If a tuple, entries of `assumed_periods` must be ints or "
                 "floats."
             )
-        self.assumed_periods = deepcopy(assumed_periods)
+        self._assumed_periods = deepcopy(assumed_periods)
 
         if not isinstance(outlier_boundary, (int, float)):
             raise TypeError("`outlier_boundary` must be an int or a float.")
-        self.outlier_boundary = deepcopy(outlier_boundary)
+        self._outlier_boundary = deepcopy(outlier_boundary)
 
         if random_seed is not None and not isinstance(random_seed, int):
             raise TypeError("`random_seed` must be an int or None.")
         if random_seed is not None:
-            self.random_seed = deepcopy(random_seed)
+            self._random_seed = deepcopy(random_seed)
 
     def _standardise_data(self) -> None:
         """Standardise data to have S.D. of 1 and clipped outliers."""
         standard_data = np.diff(self._data, axis=1)  # derivatives of data
         standard_data /= np.mean(np.abs(standard_data), axis=1)  # S.D. == 1
         standard_data = np.clip(
-            standard_data, -self.outlier_boundary, self.outlier_boundary
+            standard_data, -self._outlier_boundary, self._outlier_boundary
         )  # clip outliers
 
-        self._data_standard = standard_data
+        self._standard_data = standard_data
 
-    def _optimise_period(self) -> None:
-        """Optimise signal period."""
-        random_state = np.random.RandomState(self.random_seed)
+    def _optimise_period_estimate(self) -> None:
+        """Optimise signal period estimate."""
+        random_state = np.random.RandomState(self._random_seed)
 
         stim_period = np.nan
 
         opt_sample_lens = np.unique(
             [
-                int(np.min((self.search_samples.shape[0], length)))
+                int(np.min((self._search_samples.shape[0], length)))
                 for length in [5000, 10000, 25000]
             ]
         )
@@ -163,7 +249,7 @@ class PARRM:
             )
 
             periods = []
-            for assumed_period in self.assumed_periods:
+            for assumed_period in self._assumed_periods:
                 periods.extend(
                     np.concatenate(
                         (
@@ -187,7 +273,7 @@ class PARRM:
             for period_idx, period in enumerate(periods):
                 output = self._optimise_local(
                     period,
-                    self._data_standard,
+                    self._standard_data,
                     use_idcs,
                     np.min((bandwidth, use_idcs.shape[0] // 4)),
                     lambda_,
@@ -211,7 +297,7 @@ class PARRM:
                         self._optimise_local,
                         periods[iter_idx],
                         (
-                            self._data_standard,
+                            self._standard_data,
                             use_idcs,
                             np.min((bandwidth, use_idcs.shape[0] // 4)),
                             lambda_,
@@ -234,7 +320,7 @@ class PARRM:
             self._optimise_local,
             stim_period,
             (
-                self._data_standard,
+                self._standard_data,
                 use_idcs,
                 np.min((bandwidths[run_idx - 2], use_idcs.shape[0] // 4)),
                 0.0,
@@ -248,18 +334,36 @@ class PARRM:
         ignore_portion: float,
         random_state: np.random.RandomState,
     ) -> np.ndarray:
-        """Get indices for samples in the centre of the data segment."""
-        sample_range = self.search_samples[0] + self.search_samples[-1]
+        """Get indices for samples in the centre of the data segment.
+
+        Parameters
+        ----------
+        use_n_samples : int
+            Number of samples to use from the data segment.
+
+        ignore_portion : float
+            Portion of the data segment to ignore when getting the indices.
+
+        random_state : numpy.random.RandomState
+            Random state object to use to generate numbers if the available
+            number of samples is less than that requested.
+
+        Returns
+        -------
+        use_indices : numpy.ndarray, shape of (samples)
+            Indices of samples in the centre of the data segment.
+        """
+        sample_range = self._search_samples[0] + self._search_samples[-1]
         start_idx = int(np.ceil((sample_range - use_n_samples) / 2))
         end_idx = int(np.floor((sample_range + use_n_samples) / 2))
 
         if self._n_samples * ignore_portion < end_idx - start_idx:
             return np.arange(start_idx, end_idx + 1)
 
-        start_idx = self.search_samples[0] + np.floor(
+        start_idx = self._search_samples[0] + np.floor(
             (1.0 - ignore_portion) / 2.0 * self._n_samples
         )
-        end_idx = self.search_samples[1] - np.ceil(
+        end_idx = self._search_samples[1] - np.ceil(
             (1.0 - ignore_portion) / 2.0 * self._n_samples
         )
         return np.unique(
@@ -279,7 +383,29 @@ class PARRM:
         bandwidth: int,
         lambda_: float,
     ) -> float:
-        """
+        """???
+
+        Parameters
+        ----------
+        period : float
+            Estimate of the artefact period.
+
+        data : numpy.ndarray, shape of (channels, times)
+            Data containing artefacts whose period should be estimated.
+
+        indices : numpy.ndarray, shape of (samples)
+            Samples to use to estimate the period in `data`.
+
+        bandwidth: int
+
+
+        lambda_ : float
+            Regularisation parameter.
+
+        Returns
+        -------
+        f : float
+            ???
 
         Notes
         -----
@@ -292,7 +418,7 @@ class PARRM:
         s = lambda_ * s / s.sum()
 
         for data_chan in data:
-            output = self._fit_sinusoids_to_data(
+            output = self._fit_waves_to_data(
                 data_chan[indices], indices, period, bandwidth
             )
             if isinstance(output, np.linalg.LinAlgError):
@@ -302,14 +428,37 @@ class PARRM:
 
         return f / self._n_chans
 
-    def _fit_sinusoids_to_data(
+    def _fit_waves_to_data(
         self,
         data: np.ndarray,
         indices: np.ndarray,
         period: float,
         n_waves: int,
-    ):
-        """"""
+    ) -> tuple[np.ndarray, np.ndarray] | np.linalg.LinAlgError:
+        """Fit sine and cosine waves to the data.
+
+        Parameters
+        ----------
+        data : numpy.ndarray
+
+        indices : numpy.ndarray
+
+        period : float
+
+        n_wave : int
+            Number of sine and cosine waves to combine with `data`.
+
+        Returns
+        -------
+        residuals : numpy.ndarray
+            ??
+
+        beta : numpy.ndarray
+            ??
+
+        error : numpy.linalg.LinAlgError
+            Returned if the wave-data combination is singular.
+        """
         angles = (indices + 1) * (2 * np.pi / period)
         waves = np.ones((data.shape[0], 2 * n_waves + 1))
         for wave_idx in range(1, n_waves + 1):
@@ -327,53 +476,87 @@ class PARRM:
 
     def create_filter(
         self,
-        sample_window_size: int | None = None,
-        skip_n_samples: int = 0,
+        filter_half_width: int | None = None,
+        omit_n_samples: int = 0,
         filter_direction: str = "both",
-        period_window_size: float | None = None,
-    ) -> np.ndarray:
-        """Create the PARRM filter for removing the stimulation artefacts."""
+        period_half_width: float | None = None,
+    ) -> None:
+        """Create the PARRM filter for removing the stimulation artefacts.
+
+        Can only be called after the artefact period has been estimated with
+        :meth:`find_period`.
+
+        Parameters
+        ----------
+        filter_half_width : int | None (default None)
+            Half-width of the filter to create, in samples. If ``None``, a
+            filter half-width will be generated based on ``omit_n_samples``.
+
+        omit_n_samples : int (default 0)
+            Number of samples to omit from the centre of ``filter_half_width``.
+
+        filter_direction : str (default "both")
+            Direction from which samples should be taken to create the filter,
+            relative to the centre of the filter window. Can be: "both" for
+            backward and forward samples; "past" for backward samples only; and
+            "future" for forward samples only.
+
+        period_half_width : float | None (default None)
+            Half-width of the window in samples of period space for which
+            points at a similar location in the waveform will be averaged. If
+            ``None``, :attr:`period` / 50 is used.
+        """
+        if self._verbose:
+            print("Creating the filter...")
+
+        if self._period is None:
+            raise ValueError(
+                "The period has not yet been estimated. The `find_period` "
+                "method must be called first."
+            )
+
         self._check_sort_create_filter_inputs(
-            sample_window_size,
-            skip_n_samples,
+            filter_half_width,
+            omit_n_samples,
             filter_direction,
-            period_window_size,
+            period_half_width,
         )
 
         self._generate_filter()
 
+        if self._verbose:
+            print("    ... Filter created\n")
+
     def _check_sort_create_filter_inputs(
         self,
-        sample_window_size: int,
-        skip_n_samples: int,
+        filter_half_width: int,
+        omit_n_samples: int,
         filter_direction: str,
-        period_window_size: float,
+        period_half_width: float,
     ) -> None:
         """Check and sort `create_filter` inputs."""
-        if not isinstance(skip_n_samples, int):
-            raise TypeError("`skip_n_samples` must be an int.")
-        if skip_n_samples < 0:
-            raise ValueError("`skip_n_samples` must be >= 0.")
-        self.skip_n_samples = deepcopy(skip_n_samples)
+        if not isinstance(omit_n_samples, int):
+            raise TypeError("`omit_n_samples` must be an int.")
+        if omit_n_samples < 0:
+            raise ValueError("`omit_n_samples` must be >= 0.")
+        self._omit_n_samples = deepcopy(omit_n_samples)
 
-        if period_window_size is None:
-            period_window_size = self._period / 50
-        if not isinstance(period_window_size, float):
-            raise TypeError("`period_window_size` must be a float.")
-        if period_window_size > self._period:
-            raise ValueError("`period_window_size` must be <= the period.")
-        self.period_window_size = deepcopy(period_window_size)
+        if period_half_width is None:
+            period_half_width = self._period / 50
+        if not isinstance(period_half_width, float):
+            raise TypeError("`period_half_width` must be a float.")
+        if period_half_width > self._period:
+            raise ValueError("`period_half_width` must be <= the period.")
+        self._period_half_width = deepcopy(period_half_width)
 
-        # Must come after `skip_n_samples` and `period_window_size` set!
-        if sample_window_size is None:
-            sample_window_size = self._get_sample_window_size()
-        if not isinstance(sample_window_size, int):
-            raise TypeError("`sample_window_size` must be an int.")
-        if sample_window_size <= skip_n_samples:
-            raise ValueError(
-                "`sample_window_size` must be > `skip_n_samples`."
-            )
-        self.sample_window_size = deepcopy(sample_window_size)
+        # Must come after `omit_n_samples` and `period_half_width` set!
+        if filter_half_width is None:
+            filter_half_width = self._get_filter_half_width()
+        if not isinstance(filter_half_width, int):
+            raise TypeError("`filter_half_width` must be an int.")
+        if filter_half_width <= omit_n_samples:
+            raise ValueError("`filter_half_width` must be > `omit_n_samples`.")
+        self._filter_half_width = deepcopy(filter_half_width)
 
         if not isinstance(filter_direction, str):
             raise TypeError("`filter_direction` must be a str.")
@@ -382,85 +565,138 @@ class PARRM:
             raise ValueError(
                 f"`filter_direction` must be one of {valid_filter_directions}."
             )
-        self.filter_direction = deepcopy(filter_direction)
+        self._filter_direction = deepcopy(filter_direction)
 
-    def _get_sample_window_size(self) -> int:
-        """Get appropriate `sample_window_size` if None given."""
-        sample_window_size = deepcopy(self.skip_n_samples)
+    def _get_filter_half_width(self) -> int:
+        """Get appropriate `filter_half_width`, if None given."""
+        filter_half_width = deepcopy(self._omit_n_samples)
         check = 0
-        while check < 50 and sample_window_size < 10e5:
-            sample_window_size += 1
-            modulus = np.mod(sample_window_size, self._period)
+        while check < 50 and filter_half_width < 10e5:
+            filter_half_width += 1
+            modulus = np.mod(filter_half_width, self._period)
             if (
-                modulus <= self.period_window_size
-                or modulus >= self._period + self.period_window_size
+                modulus <= self._period_half_width
+                or modulus >= self._period + self._period_half_width
             ):
                 check += 1
 
-        return sample_window_size
+        return filter_half_width
 
     def _generate_filter(self) -> None:
         """Generate linear filter for removing stimulation artefacts."""
-        window = np.arange(-self.sample_window_size, self.sample_window_size)
-        y = np.mod(window, self._period)
+        window = np.arange(
+            -self._filter_half_width, self._filter_half_width + 1
+        )
+        modulus = np.mod(window, self._period)
 
-        filter_ = np.zeros_like(window)
+        filter_ = np.zeros_like(window, dtype=np.float64)
         filter_[
             (
-                y <= self.period_window_size
-                or y >= self.period_window_size + self._period
+                (modulus <= self._period_half_width)
+                | (modulus >= self._period - self._period_half_width)
             )
-            & (np.abs(window) > self.skip_n_samples)
-        ] += 1
+            & (np.abs(window) > self._omit_n_samples)
+        ] += 1.0
 
-        if self.filter_direction == "past":
+        if self._filter_direction == "past":
             filter_[window > 0] = 0
-        elif self.filter_direction == "future":
+        elif self._filter_direction == "future":
             filter_[window <= 0] = 0
 
-        filter_ = -filter_ / np.max(filter_.sum(), np.finfo(filter_.dtype).eps)
+        filter_ = -filter_ / np.max(
+            (filter_.sum(), np.finfo(filter_.dtype).eps)
+        )
         filter_[window == 0] = 1
 
         self._filter = filter_
 
     def filter_data(self) -> np.ndarray:
-        """Apply the PARRM filter to the data and return it."""
-        return (
-            convolve2d(self._data, np.rot90(self._filter), "same") - self._data
-        ) / (
-            1
-            - (
-                convolve2d(
-                    self._data, np.rot90(np.ones_like(self._data)), "same"
-                )
+        """Apply the PARRM filter to the data and return it.
+
+        Can only be called after the filter has been created with
+        :meth:`create_filter`.
+
+        Returns
+        -------
+        filtered_data : numpy.ndarray, shape of (channels, times)
+            The filtered, artefact-free data.
+        """
+        if self._verbose:
+            print("Filtering the data...")
+
+        if self._filter is None:
+            raise ValueError(
+                "The filter has not yet been created. The `create_filter` "
+                "method must be called first."
             )
-            + self._data
+
+        numerator = (
+            convolve2d(self._data.T, self._filter[:, np.newaxis], "same")
+            - self._data.T
         )
+        denominator = 1 - convolve2d(
+            np.ones_like(self._data).T,
+            self._filter[:, np.newaxis],
+            "same",
+        )
+
+        self._filtered_data = (numerator / denominator + self._data.T).T
+
+        if self._verbose:
+            print("    ... Data filtered\n")
+
+        return self._filtered_data
+
+    @property
+    def data(self) -> np.ndarray:
+        """Return a copy of the data."""
+        if self._data is None:
+            raise AttributeError("No data has been provided yet.")
+        return self._data.copy()
 
     @property
     def period(self) -> float:
         """Return a copy of the estimated stimulation period."""
+        if self._period is None:
+            raise AttributeError("No period has been computed yet.")
         return deepcopy(self._period)
 
     @property
     def filter(self) -> np.ndarray:
         """Return a copy of the PARRM filter."""
+        if self._filter is None:
+            raise AttributeError("No filter has been computed yet.")
         return self._filter.copy()
+
+    @property
+    def filtered_data(self) -> np.ndarray:
+        """Return a copy of the filtered data."""
+        if self._filtered_data is None:
+            raise AttributeError("No data has been filtered yet.")
+        return deepcopy(self._filtered_data)
 
     @property
     def settings(self) -> dict:
         """Return the settings used to generate the PARRM filter."""
+        if self._period is None or self._filter is None:
+            raise AttributeError(
+                "Analysis settings have not been established yet."
+            )
         return {
+            "data": {
+                "sampling_freq": self._sampling_freq,
+                "artefact_freq": self._artefact_freq,
+            },
             "stim_period": {
-                "search_samples": self.search_samples,
-                "assumed_period": self.assumed_periods,
-                "outlier_bound": self.outlier_boundary,
-                "random_seed": self.random_seed,
+                "search_samples": self._search_samples,
+                "assumed_period": self._assumed_periods,
+                "outlier_bound": self._outlier_boundary,
+                "random_seed": self._random_seed,
             },
             "filter": {
-                "sample_window_size": self.sample_window_size,
-                "skip_n_samples": self.skip_n_samples,
-                "filter_direction": self.filter_direction,
-                "period_window_size": self.period_window_size,
+                "filter_half_width": self._filter_half_width,
+                "omit_n_samples": self._omit_n_samples,
+                "filter_direction": self._filter_direction,
+                "period_half_width": self._period_half_width,
             },
         }
