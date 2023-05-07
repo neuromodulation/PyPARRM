@@ -1,7 +1,6 @@
 """Tools for fitting PARRM filters to data."""
 
 from copy import deepcopy
-from multiprocessing import cpu_count
 
 import numpy as np
 from scipy.optimize import fmin
