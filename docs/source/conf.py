@@ -10,7 +10,7 @@ import os
 import sys
 
 import pyparrm
-from pyparrm._doc_utils import linkcode_resolve
+from pyparrm.utils._docs import linkcode_resolve
 
 
 project = "pyparrm"

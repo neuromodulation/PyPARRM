@@ -6,6 +6,8 @@ import numpy as np
 from scipy.optimize import fmin
 from scipy.signal import convolve2d
 
+from pyparrm.utils._plotting import _ExploreParams
+
 
 class PARRM:
     """Class for removing stimulation artefacts from data using PARRM.
@@ -474,6 +476,16 @@ class PARRM:
 
         return residuals**2, beta**2
 
+    def explore_filter_params(self) -> None:
+        """Create an interactive plot to explore filter parameters."""
+        if self._period is None:
+            raise ValueError(
+                "The period has not yet been estimated. The `find_period` "
+                "method must be called first."
+            )
+        param_explorer = _ExploreParams(self)
+        param_explorer.create_plot()
+
     def create_filter(
         self,
         filter_half_width: int | None = None,
@@ -556,6 +568,11 @@ class PARRM:
             raise TypeError("`filter_half_width` must be an int.")
         if filter_half_width <= omit_n_samples:
             raise ValueError("`filter_half_width` must be > `omit_n_samples`.")
+        if filter_half_width > ((self._n_samples - 1) // 2) - omit_n_samples:
+            raise ValueError(
+                "`filter_half_width` must be <= ((no. of samples - 1) // 2) - "
+                "`omit_n_samples`"
+            )
         self._filter_half_width = deepcopy(filter_half_width)
 
         if not isinstance(filter_direction, str):
