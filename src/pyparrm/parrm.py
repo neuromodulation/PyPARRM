@@ -1,6 +1,7 @@
 """Tools for fitting PARRM filters to data."""
 
 from copy import deepcopy
+from multiprocessing import cpu_count
 
 import numpy as np
 from scipy.optimize import fmin
@@ -37,6 +38,20 @@ class PARRM:
     verbose : bool (default True)
         Whether or not to print information about the status of the processing.
 
+    Methods
+    -------
+    find_periods
+        Find the period of the artefacts.
+
+    explore_filter_params
+        Create an interactive plot to explore filter parameters.
+
+    create_filter
+        Create the PARRM filter for removing the stimulation artefacts.
+
+    filter_data
+        Apply the PARRM filter to the data and return it.
+
     References
     ----------
     .. footbibliography::
@@ -55,6 +70,7 @@ class PARRM:
     _assumed_periods = None
     _outlier_boundary = None
     _random_seed = None
+    _n_jobs = None
 
     _filter = None
     _filter_half_width = None
@@ -229,7 +245,7 @@ class PARRM:
         self._standard_data = standard_data
 
     def _optimise_period_estimate(self) -> None:
-        """Optimise signal period estimate."""
+        """Optimise artefact period estimate."""
         random_state = np.random.RandomState(self._random_seed)
 
         stim_period = np.nan
@@ -248,9 +264,10 @@ class PARRM:
         for use_n_samples, ignore_portion, bandwidth in zip(
             opt_sample_lens, ignore_sample_portions, bandwidths
         ):
-            use_idcs = self._get_centre_indices(
+            indices = self._get_centre_indices(
                 use_n_samples, ignore_portion, random_state
             )
+            bandwidth = np.min((bandwidth, indices.shape[0] // 4))
 
             periods = []
             for assumed_period in self._assumed_periods:
@@ -320,13 +337,14 @@ class PARRM:
                 "your data does not contain NaNs."
             )
 
+        # final optimisation run with 0 regularisation for best fit
         self._period = fmin(
             self._optimise_local,
             stim_period,
             (
                 self._standard_data,
-                use_idcs,
-                np.min((bandwidths[run_idx - 2], use_idcs.shape[0] // 4)),
+                indices,
+                bandwidth,
                 0.0,
             ),
             disp=False,
@@ -482,6 +500,9 @@ class PARRM:
         self, frequency_res: int | float = 5.0, n_jobs: int = 1
     ) -> None:
         """Create an interactive plot to explore filter parameters.
+
+        Can only be called after the artefact period has been estimated with
+        :meth:`find_period`.
 
         Parameters
         ----------
