@@ -476,14 +476,14 @@ class PARRM:
 
         return residuals**2, beta**2
 
-    def explore_filter_params(self) -> None:
+    def explore_filter_params(self, frequency_res: int | float = 2.0) -> None:
         """Create an interactive plot to explore filter parameters."""
         if self._period is None:
             raise ValueError(
                 "The period has not yet been estimated. The `find_period` "
                 "method must be called first."
             )
-        param_explorer = _ExploreParams(self)
+        param_explorer = _ExploreParams(self, frequency_res)
         param_explorer.create_plot()
 
     def create_filter(

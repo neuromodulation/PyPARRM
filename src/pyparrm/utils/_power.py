@@ -32,7 +32,7 @@ def _compute_psd(
     No checks on the inputs are performed for speed.
     """
     fft_coeffs = np.fft.fft(data, n_freqs * 2)[1 : n_freqs + 1]
-    psd = (1 / sampling_freq * n_freqs * 2) * np.abs(fft_coeffs) ** 2
+    psd = (1 / (sampling_freq * n_freqs * 2)) * np.abs(fft_coeffs) ** 2
     psd[:-1] *= 2
 
     return psd

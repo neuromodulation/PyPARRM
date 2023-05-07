@@ -17,9 +17,14 @@ class _ExploreParams:
     parrm : pyparrm.PARRM
         PARRM object containing the data for which filter parameters should be
         explored.
+
+    frequency_res : int | float (default 1.0)
+        Frequency resolution, in Hz, to use when computing the power spectra of
+        the data.
     """
 
     parrm = None
+    frequency_res = None
 
     figure = None
     period_half_width_axis = None
@@ -27,6 +32,11 @@ class _ExploreParams:
     freq_data_axis = None
     period_window_axis = None
     period_window_highlight = None
+
+    slider_period_half_width = None
+    slider_filter_half_width = None
+    slider_omit_n_samples = None
+    button_filter_direction = None
 
     current_channel_idx = 0
     current_period_half_width = None
@@ -39,13 +49,12 @@ class _ExploreParams:
     filtered_data_freq = None
     filtered_data_line_freq = None
 
-    def __init__(self, parrm) -> None:
-        self._prepare_parrm(parrm)
-        self._copy_parrm_settings()
+    def __init__(self, parrm, frequency_res: int | float = 2.0) -> None:
+        self._check_sort_init_inputs(parrm, frequency_res)
         self._initialise_parrm_data()
 
-    def _prepare_parrm(self, parrm) -> None:
-        """Prepare PARRM object for exploring filter parameters."""
+    def _check_sort_init_inputs(self, parrm, frequency_res: float) -> None:
+        """Check and sort init. inputs."""
         assert parrm._period is not None, (
             "PyPARRM Internal Error: `_ParamSelection` should only be called "
             "if the period has been estimated. Please contact the PyPARRM "
@@ -54,13 +63,23 @@ class _ExploreParams:
         self.parrm = deepcopy(parrm)
         self.parrm._verbose = False
         self.parrm._check_sort_create_filter_inputs(None, 0, "both", None)
-
-    def _copy_parrm_settings(self) -> None:
-        """Copy settings from PARRM for exploring filter parameters."""
         self.current_period_half_width = self.parrm._period_half_width
         self.current_filter_half_width = self.parrm._filter_half_width
         self.current_filter_direction = self.parrm._filter_direction
         self.current_omit_n_samples = self.parrm._omit_n_samples
+
+        if not isinstance(frequency_res, int) and not isinstance(
+            frequency_res, float
+        ):
+            raise TypeError("`frequency_res` must be an int or a float.")
+        if (
+            frequency_res <= 0
+            or frequency_res > self.parrm._sampling_freq // 2
+        ):
+            raise ValueError(
+                "`frequency_res`must be > 0 and <= the Nyquist frequency."
+            )
+        self.frequency_res = deepcopy(frequency_res)
 
     def _initialise_parrm_data(self) -> None:
         """Initialise data to be plotted and information for plotting."""
@@ -81,7 +100,12 @@ class _ExploreParams:
         )
 
         # freq data info.
-        self.freqs = np.arange(1, self.parrm._sampling_freq // 2)
+        n_freqs = int((self.parrm._sampling_freq // 2) // self.frequency_res)
+        self.freqs = np.abs(
+            np.fft.fftfreq(n_freqs * 2, 1 / self.parrm._sampling_freq)[
+                1 : n_freqs + 1
+            ]
+        )
 
     def create_plot(self) -> None:
         """Create parameter exploration plot."""
@@ -105,12 +129,9 @@ class _ExploreParams:
         def update_filter_half_width(half_width: int) -> None:
             """Update filter half width according to the slider."""
             self.current_filter_half_width = half_width
-            max_omit_samples = self.half_n_samples - half_width + 1
-            if self.slider_omit_n_samples.val > max_omit_samples:
-                self.slider_omit_n_samples.eventson = False
-                self.slider_omit_n_samples.set_val(max_omit_samples)
-                self.current_omit_n_samples = max_omit_samples
-                self.slider_omit_n_samples.eventson = True
+            if half_width <= self.current_omit_n_samples:
+                self.slider_omit_n_samples.set_val(half_width - 3)
+                return
             self.update_suptitle()
             self.update_filter()
             self.figure.canvas.draw_idle()
@@ -118,12 +139,11 @@ class _ExploreParams:
         def update_omit_n_samples(n_samples: int) -> None:
             """Update number of omitted samples according to the slider."""
             self.current_omit_n_samples = n_samples
-            max_filter_samples = self.half_n_samples - n_samples
-            if self.slider_filter_half_width.val > max_filter_samples:
-                self.slider_filter_half_width.eventson = False
-                self.slider_filter_half_width.set_val(max_filter_samples)
-                self.current_filter_half_width = max_filter_samples
-                self.slider_filter_half_width.eventson = True
+            if n_samples >= self.current_filter_half_width:
+                self.slider_omit_n_samples.set_val(
+                    self.current_filter_half_width - 3
+                )
+                return
             self.update_suptitle()
             self.update_filter()
             self.figure.canvas.draw_idle()
@@ -145,12 +165,20 @@ class _ExploreParams:
 
     def _initialise_plot(self) -> None:
         """Initialise the plot for exploring parameters."""
-        self.figure, axes = plt.subplots(2, 2)
+        self.figure, axes = plt.subplot_mosaic(
+            [
+                ["upper left", "upper right"],
+                [[["upper inner"], ["lower inner"]], "lower right"],
+            ],
+            layout="constrained",
+        )
+        self.figure.set_constrained_layout_pads(w_pad=0.25, h_pad=0.15)
+        axes["lower inner"].remove()
         self.figure.canvas.mpl_connect("key_press_event", self.check_key_event)
         self.update_suptitle()
 
         # samples in period space focused plot
-        self.period_half_width_axis = axes[0, 0]
+        self.period_half_width_axis = axes["upper left"]
         self.period_half_width_axis.scatter(
             self.sample_period_space,
             self.amplitude_period_space[self.current_channel_idx],
@@ -164,7 +192,7 @@ class _ExploreParams:
         self.period_half_width_axis.set_ylabel("Amplitude (data units)")
 
         # samples in period space overview plot
-        self.period_window_axis = axes[1, 0]
+        self.period_window_axis = axes["upper inner"]
         self.period_window_axis.scatter(
             self.sample_period_space,
             self.amplitude_period_space[0],
@@ -174,12 +202,14 @@ class _ExploreParams:
         self.period_window_highlight = self.period_window_axis.axvspan(
             0, self.current_period_half_width, color="red", alpha=0.2
         )
+        self.period_window_axis.set_xlabel("Sample-period modulus (A.U.)")
+        self.period_window_axis.set_ylabel("Amplitude (data units)")
         self.period_window_axis.set_title(
             r"$\Longleftarrow$ navigate with the arrow keys $\Longrightarrow$"
         )
 
         # timeseries data plot
-        self.time_data_axis = axes[0, 1]
+        self.time_data_axis = axes["upper right"]
         # timeseries data plot (unfiltered data)
         self.time_data_axis.plot(
             self.times,
@@ -202,19 +232,18 @@ class _ExploreParams:
         self.time_data_axis.set_xlabel("Time (s)")
         self.time_data_axis.set_ylabel("Amplitude (data units)")
         self.time_data_axis.set_ylim(self.time_data_axis.get_ylim())
-        self.time_data_axis.legend(loc="upper right")
+        self.time_data_axis.legend(loc="upper left")
 
         # frequency data plot
-        self.freq_data_axis = axes[1, 1]
+        self.freq_data_axis = axes["lower right"]
         # frequency data plot (unfiltered)
-        self.unfiltered_data_freq = _compute_psd(
-            self.parrm._data[self.current_channel_idx],
-            self.parrm._sampling_freq,
-            self.freqs.shape[0],
-        )
         self.freq_data_axis.plot(
             self.freqs,
-            self.unfiltered_data_freq,
+            _compute_psd(
+                self.parrm._data[self.current_channel_idx],
+                self.parrm._sampling_freq,
+                self.freqs.shape[0],
+            ),
             color="black",
             alpha=0.3,
             label="Unfiltered data",
@@ -233,12 +262,12 @@ class _ExploreParams:
         )[0]
         self.freq_data_axis.set_xlabel("Log frequency (Hz)")
         self.freq_data_axis.set_ylabel("Log power (dB/Hz)")
-        self.freq_data_axis.legend(loc="upper right")
+        self.freq_data_axis.legend(loc="upper left")
 
     def _initialise_widgets(self) -> None:
         """Initialise widgets to use on the plot."""
         self.slider_period_half_width = Slider(
-            self.figure.add_axes((0.1, 0.1, 0.35, 0.02)),
+            self.figure.add_axes((0.2, 0.12, 0.27, 0.025)),
             "Period half-width",
             valmin=self.sample_period_space.min(),
             valmax=self.sample_period_space_max / 2.0,
@@ -250,7 +279,7 @@ class _ExploreParams:
         )
 
         self.slider_filter_half_width = Slider(
-            self.figure.add_axes((0.1, 0.05, 0.35, 0.02)),
+            self.figure.add_axes((0.2, 0.08, 0.27, 0.025)),
             "Filter half-width",
             valmin=1,
             valmax=self.half_n_samples,
@@ -259,7 +288,7 @@ class _ExploreParams:
         )
 
         self.slider_omit_n_samples = Slider(
-            self.figure.add_axes((0.1, 0.03, 0.35, 0.02)),
+            self.figure.add_axes((0.2, 0.05, 0.27, 0.025)),
             "Omitted samples",
             valmin=0,
             valmax=self.half_n_samples - 1,
@@ -268,7 +297,7 @@ class _ExploreParams:
         )
 
         button_filter_direction_axis = self.figure.add_axes(
-            (0.025, 0.15, 0.05, 0.075)
+            (0.03, 0.06, 0.05, 0.075)
         )
         button_filter_direction_axis.set_title("Filter direction")
         self.button_filter_direction = RadioButtons(
@@ -294,20 +323,16 @@ class _ExploreParams:
         if event.key in ["up", "down"]:
             valid = True
             if event.key == "up":
-                self.change_channel(-1)
-            else:
                 self.change_channel(+1)
+            else:
+                self.change_channel(-1)
 
         if valid:
             self.figure.canvas.draw()
 
     def update_period_window(self, step: float) -> None:
         """Update size of plotted period window."""
-        self.update_subplot_xlim_position(
-            self.period_half_width_axis,
-            step,
-            (0, self.sample_period_space_max),
-        )
+        self.update_period_window_xlim_position(step)
         self.update_period_half_width_ylim()
         self.update_period_window_highlight()
 
@@ -320,14 +345,14 @@ class _ExploreParams:
             self.current_channel_idx += step
             self.plot_new_channel_data()
 
-    def update_subplot_xlim_position(self, axis, step, boundaries) -> None:
-        """Update position of xlim from start pos., keeping width constant."""
-        xlim = axis.get_xlim()
-        if xlim[0] + step < boundaries[0]:
-            step = boundaries[0] - xlim[0]
-        if xlim[1] + step > boundaries[1]:
-            step = boundaries[1] - xlim[1]
-        axis.set_xlim((xlim[0] + step, xlim[1] + step))  # keep width constant
+    def update_period_window_xlim_position(self, step: float) -> None:
+        """Update position of window xlim from start pos. w/ constant width."""
+        xlim = self.period_half_width_axis.get_xlim()
+        if xlim[0] + step < 0:
+            step = 0 - xlim[0]
+        if xlim[1] + step > self.sample_period_space_max:
+            step = self.sample_period_space_max - xlim[1]
+        self.period_half_width_axis.set_xlim((xlim[0] + step, xlim[1] + step))
 
     def update_subplot_xlim_width(self, axis, width, boundaries) -> None:
         """Update width of xlim, keeping start constant and changing end."""
@@ -365,8 +390,8 @@ class _ExploreParams:
     def update_suptitle(self) -> None:
         """Update title of the figure with parameter information."""
         self.figure.suptitle(
-            "PARRM Filter Parameter Explorer\n"
-            f"filter half width: {self.current_filter_half_width} | "
+            r"$\bf{PARRM\ Filter\ Parameter\ Explorer}$"
+            f"\nfilter half width: {self.current_filter_half_width} | "
             f"period half width: {self.current_period_half_width:.3f} | "
             f"samples omitted: {self.current_omit_n_samples} | "
             f"filter direction: {self.current_filter_direction}\n"
@@ -395,7 +420,7 @@ class _ExploreParams:
             color="orange",
             label="Filtered data",
         )[0]
-        self.time_data_axis.legend(loc="upper right")
+        self.time_data_axis.legend(loc="upper left")
 
         # frequency data
         self.filtered_data_freq = _compute_psd(
