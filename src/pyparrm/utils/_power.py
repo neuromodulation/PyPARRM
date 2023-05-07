@@ -4,7 +4,7 @@ import numpy as np
 from scipy.fft import fft
 
 
-def _compute_psd(
+def compute_psd(
     data: np.ndarray, sampling_freq: int, n_freqs: int, n_jobs: int = 1
 ) -> np.ndarray:
     """Compute power spectral density of data.
