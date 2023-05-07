@@ -295,8 +295,8 @@ class PARRM:
                 output = self._optimise_local(
                     period,
                     self._standard_data,
-                    use_idcs,
-                    np.min((bandwidth, use_idcs.shape[0] // 4)),
+                    indices,
+                    bandwidth,
                     lambda_,
                 )
                 if not isinstance(output, np.linalg.LinAlgError):
@@ -319,8 +319,8 @@ class PARRM:
                         periods[iter_idx],
                         (
                             self._standard_data,
-                            use_idcs,
-                            np.min((bandwidth, use_idcs.shape[0] // 4)),
+                            indices,
+                            bandwidth,
                             lambda_,
                         ),
                         full_output=True,
