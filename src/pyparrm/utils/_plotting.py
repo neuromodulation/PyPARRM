@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from matplotlib.widgets import RadioButtons, Slider
 import numpy as np
 
-from ._power import _compute_psd
+from pyparrm.utils._power import compute_psd
 
 
 class _ExploreParams:
@@ -153,7 +153,7 @@ class _ExploreParams:
                 1 : n_freqs + 1
             ]
         )
-        self.unfiltered_psds = _compute_psd(
+        self.unfiltered_psds = compute_psd(
             self.parrm._data, self.parrm._sampling_freq, n_freqs, self.n_jobs
         )
 
@@ -312,7 +312,7 @@ class _ExploreParams:
             label="Unfiltered data",
         )[0]
         # frequency data plot (filtered)
-        self.filtered_data_freq = _compute_psd(
+        self.filtered_data_freq = compute_psd(
             self.filtered_data_time[self.current_channel_idx],
             self.parrm._sampling_freq,
             self.freqs.shape[0],
@@ -554,7 +554,7 @@ class _ExploreParams:
         self.time_data_axis.autoscale_view(scalex=False, scaley=True)
 
         # frequency data
-        self.filtered_data_freq = _compute_psd(
+        self.filtered_data_freq = compute_psd(
             self.filtered_data_time[self.current_channel_idx],
             self.parrm._sampling_freq,
             self.freqs.shape[0],
