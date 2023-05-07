@@ -219,7 +219,9 @@ class PARRM:
     def _standardise_data(self) -> None:
         """Standardise data to have S.D. of 1 and clipped outliers."""
         standard_data = np.diff(self._data, axis=1)  # derivatives of data
-        standard_data /= np.mean(np.abs(standard_data), axis=1)  # S.D. == 1
+        standard_data /= np.mean(np.abs(standard_data), axis=1)[
+            :, None
+        ]  # S.D. == 1
         standard_data = np.clip(
             standard_data, -self._outlier_boundary, self._outlier_boundary
         )  # clip outliers
@@ -476,7 +478,9 @@ class PARRM:
 
         return residuals**2, beta**2
 
-    def explore_filter_params(self, frequency_res: int | float = 5.0) -> None:
+    def explore_filter_params(
+        self, frequency_res: int | float = 5.0, n_jobs: int = 1
+    ) -> None:
         """Create an interactive plot to explore filter parameters.
 
         Parameters
@@ -484,6 +488,11 @@ class PARRM:
         frequency_res : int | float (default 5.0)
             Frequency resolution, in Hz, to use when computing the power
             spectra of the data. Must be > 0 and <= the Nyquist frequency.
+
+        n_jobs : int (default 1)
+            Number of jobs to run in parallel when computing the power spectra.
+            Must be < the number of available CPUs and > 0 (unless it is -1, in
+            which case all available CPUs are used).
         """
         if self._verbose:
             print("Opening the filter parameter explorer...")
@@ -493,8 +502,8 @@ class PARRM:
                 "The period has not yet been estimated. The `find_period` "
                 "method must be called first."
             )
-        param_explorer = _ExploreParams(self, frequency_res)
-        param_explorer.create_plot()
+        param_explorer = _ExploreParams(self, frequency_res, n_jobs)
+        param_explorer.plot()
 
         if self._verbose:
             print("    ... Filter parameter explorer closed\n")
