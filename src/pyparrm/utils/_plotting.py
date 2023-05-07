@@ -44,14 +44,19 @@ class _ExploreParams:
     current_omit_n_samples = None
     current_filter_direction = None
 
+    focused_period_scatter = None
+    overview_period_scatter = None
+    current_amplitude_period_space = None
+    current_sample_period_space = None
+
     filtered_data_time = None
     filtered_data_line_time = None
     filtered_data_freq = None
     filtered_data_line_freq = None
 
-    def __init__(self, parrm, frequency_res: int | float = 2.0) -> None:
+    def __init__(self, parrm, frequency_res: int | float = 5.0) -> None:
         self._check_sort_init_inputs(parrm, frequency_res)
-        self._initialise_parrm_data()
+        self._initialise_parrm_data_info()
 
     def _check_sort_init_inputs(self, parrm, frequency_res: float) -> None:
         """Check and sort init. inputs."""
@@ -67,6 +72,15 @@ class _ExploreParams:
         self.current_filter_half_width = self.parrm._filter_half_width
         self.current_filter_direction = self.parrm._filter_direction
         self.current_omit_n_samples = self.parrm._omit_n_samples
+        self.current_sample_period_space = np.mod(
+            np.arange(self.current_filter_half_width * 2 - 1),
+            self.parrm._period,
+        )
+        self.current_amplitude_period_space = np.diff(
+            self.parrm._data[
+                self.current_channel_idx, : self.current_filter_half_width * 2
+            ]
+        )
 
         if not isinstance(frequency_res, int) and not isinstance(
             frequency_res, float
@@ -81,18 +95,16 @@ class _ExploreParams:
             )
         self.frequency_res = deepcopy(frequency_res)
 
-    def _initialise_parrm_data(self) -> None:
-        """Initialise data to be plotted and information for plotting."""
-        # period space info.
-        self.sample_period_space = np.mod(
-            np.arange(self.parrm._n_samples - 1), self.parrm._period
+    def _initialise_parrm_data_info(self) -> None:
+        """Initialise information from PARRM data for plotting."""
+        self.largest_sample_period_space = np.mod(
+            np.arange((self.parrm._n_samples // 2) - 1),
+            self.parrm._period,
         )
-        self.sample_period_space_max = self.sample_period_space.max()
-        self.sample_period_space_range = (
-            self.sample_period_space_max - self.sample_period_space.min()
+        self.largest_sample_period_space_range = (
+            self.largest_sample_period_space.max()
+            - self.largest_sample_period_space.min()
         )
-        self.half_n_samples = self.sample_period_space.shape[0] // 2
-        self.amplitude_period_space = np.diff(self.parrm.data)
 
         # filtered data info.
         self.times = (
@@ -115,11 +127,7 @@ class _ExploreParams:
         def update_period_half_width(half_width: float) -> None:
             """Update period half width according to the slider."""
             self.current_period_half_width = half_width
-            self.update_subplot_xlim_width(
-                self.period_half_width_axis,
-                half_width,
-                (0, self.sample_period_space_max),
-            )
+            self.update_period_half_width_xlim_width(half_width)
             self.update_period_half_width_ylim()
             self.update_period_window_highlight()
             self.update_suptitle()
@@ -133,6 +141,7 @@ class _ExploreParams:
                 self.slider_omit_n_samples.set_val(half_width - 3)
                 return
             self.update_suptitle()
+            self.update_sample_period_space()
             self.update_filter()
             self.figure.canvas.draw_idle()
 
@@ -161,10 +170,10 @@ class _ExploreParams:
         self.button_filter_direction.on_clicked(update_filter_direction)
 
         plt.show()
-        print("jeff")
 
     def _initialise_plot(self) -> None:
         """Initialise the plot for exploring parameters."""
+        plt.ion()  # needed for fine-tuning layout
         self.figure, axes = plt.subplot_mosaic(
             [
                 ["upper left", "upper right"],
@@ -172,17 +181,24 @@ class _ExploreParams:
             ],
             layout="constrained",
         )
-        self.figure.set_constrained_layout_pads(w_pad=0.25, h_pad=0.15)
         axes["lower inner"].remove()
+        self.figure.set_constrained_layout_pads(w_pad=0.05, h_pad=0.1)
+        self.figure.suptitle("placeholder\n")  # smaller title, less space
+        self.figure.canvas.draw()  # set basic layout
+        self.update_suptitle()  # set bigger title, but don't redraw!
+        self.figure.set_layout_engine(None)  # stop updates to layout
+        plt.ioff()  # no longer needed
+
         self.figure.canvas.mpl_connect("key_press_event", self.check_key_event)
-        self.update_suptitle()
 
         # samples in period space focused plot
         self.period_half_width_axis = axes["upper left"]
-        self.period_half_width_axis.scatter(
-            self.sample_period_space,
-            self.amplitude_period_space[self.current_channel_idx],
-            marker=".",
+        self.focused_period_scatter = self.period_half_width_axis.scatter(
+            self.current_sample_period_space,
+            self.current_amplitude_period_space,
+            marker="o",
+            edgecolors="#1f77b4",
+            facecolors="none",
         )
         self.period_half_width_axis.set_xlim(
             (0, self.current_period_half_width)
@@ -193,10 +209,13 @@ class _ExploreParams:
 
         # samples in period space overview plot
         self.period_window_axis = axes["upper inner"]
-        self.period_window_axis.scatter(
-            self.sample_period_space,
-            self.amplitude_period_space[0],
+        self.overview_period_scatter = self.period_window_axis.scatter(
+            self.current_sample_period_space,
+            self.current_amplitude_period_space,
             marker=".",
+            s=1,
+            edgecolors="#1f77b4",
+            alpha=0.5,
         )
         self.period_window_axis.set_xlim(self.period_window_axis.get_xlim())
         self.period_window_highlight = self.period_window_axis.axvspan(
@@ -225,7 +244,7 @@ class _ExploreParams:
         self.filtered_data_line_time = self.time_data_axis.plot(
             self.times,
             self.filtered_data_time[self.current_channel_idx],
-            color="orange",
+            color="#ff7f0e",
             linewidth=0.5,
             label="Filtered data",
         )[0]
@@ -257,7 +276,7 @@ class _ExploreParams:
         self.filtered_data_line_freq = self.freq_data_axis.loglog(
             self.freqs,
             self.filtered_data_freq,
-            color="orange",
+            color="#ff7f0e",
             label="Filtered data",
         )[0]
         self.freq_data_axis.set_xlabel("Log frequency (Hz)")
@@ -269,12 +288,14 @@ class _ExploreParams:
         self.slider_period_half_width = Slider(
             self.figure.add_axes((0.2, 0.12, 0.27, 0.025)),
             "Period half-width",
-            valmin=self.sample_period_space.min(),
-            valmax=self.sample_period_space_max / 2.0,
+            valmin=self.largest_sample_period_space.min(),
+            valmax=self.largest_sample_period_space.max() / 2.0,
             valinit=self.current_period_half_width,
-            valstep=self.sample_period_space_range
-            / self.amplitude_period_space.shape[1]
-            * 0.25,
+            valstep=(
+                self.largest_sample_period_space_range
+                / self.largest_sample_period_space.shape[0]
+                * 0.25
+            ),
             valfmt="%0.3f",
         )
 
@@ -282,7 +303,7 @@ class _ExploreParams:
             self.figure.add_axes((0.2, 0.08, 0.27, 0.025)),
             "Filter half-width",
             valmin=1,
-            valmax=self.half_n_samples,
+            valmax=(self.parrm._n_samples - 1) // 2,
             valinit=self.current_filter_half_width,
             valstep=1,
         )
@@ -291,7 +312,7 @@ class _ExploreParams:
             self.figure.add_axes((0.2, 0.05, 0.27, 0.025)),
             "Omitted samples",
             valmin=0,
-            valmax=self.half_n_samples - 1,
+            valmax=((self.parrm._n_samples - 1) // 2) - 1,
             valinit=self.current_omit_n_samples,
             valstep=1,
         )
@@ -313,8 +334,10 @@ class _ExploreParams:
         if event.key in ["right", "left"]:
             valid = True
             step_size = (
-                self.sample_period_space_range * self.current_period_half_width
-            ) * 0.25
+                self.largest_sample_period_space_range
+                * self.current_period_half_width
+                * 0.25
+            )
             if event.key == "right":
                 self.update_period_window(step_size)
             else:
@@ -336,6 +359,37 @@ class _ExploreParams:
         self.update_period_half_width_ylim()
         self.update_period_window_highlight()
 
+    def update_sample_period_space(self) -> None:
+        """Update sample in period space plots."""
+        self.current_sample_period_space = np.mod(
+            np.arange(self.current_filter_half_width * 2 - 1),
+            self.parrm._period,
+        )
+        self.current_amplitude_period_space = np.diff(
+            self.parrm._data[
+                self.current_channel_idx, : self.current_filter_half_width * 2
+            ]
+        )
+
+        self.focused_period_scatter.remove()
+        self.focused_period_scatter = self.period_half_width_axis.scatter(
+            self.current_sample_period_space,
+            self.current_amplitude_period_space,
+            marker="o",
+            edgecolors="#1f77b4",
+            facecolors="none",
+        )
+
+        self.overview_period_scatter.remove()
+        self.overview_period_scatter = self.period_window_axis.scatter(
+            self.current_sample_period_space,
+            self.current_amplitude_period_space,
+            marker=".",
+            s=1,
+            edgecolors="#1f77b4",
+            alpha=0.5,
+        )
+
     def change_channel(self, step: int) -> None:
         """Change which channel's data is being plotted."""
         if (
@@ -350,27 +404,26 @@ class _ExploreParams:
         xlim = self.period_half_width_axis.get_xlim()
         if xlim[0] + step < 0:
             step = 0 - xlim[0]
-        if xlim[1] + step > self.sample_period_space_max:
-            step = self.sample_period_space_max - xlim[1]
+        if xlim[1] + step > self.current_sample_period_space.max():
+            step = self.current_sample_period_space.max() - xlim[1]
         self.period_half_width_axis.set_xlim((xlim[0] + step, xlim[1] + step))
 
-    def update_subplot_xlim_width(self, axis, width, boundaries) -> None:
-        """Update width of xlim, keeping start constant and changing end."""
-        xlim = list(axis.get_xlim())
+    def update_period_half_width_xlim_width(self, width: float) -> None:
+        """Update width of xlim of period half-width focus plot."""
+        xlim = list(self.period_half_width_axis.get_xlim())
         width_diff = width - (xlim[1] - xlim[0])
-        if xlim[1] + width_diff > boundaries[1]:
+        if xlim[1] + width_diff > self.current_sample_period_space.max():
             xlim[0] -= width_diff
         else:
             xlim[1] += width_diff
-        axis.set_xlim(xlim)
+        self.period_half_width_axis.set_xlim(xlim)
 
     def update_period_half_width_ylim(self) -> None:
         """Update ylim of period half-width subplot from data in xlim."""
         xlim = self.period_half_width_axis.get_xlim()
-        y_vals = self.amplitude_period_space[
-            self.current_channel_idx,
-            (self.sample_period_space >= xlim[0])
-            & (self.sample_period_space < xlim[1]),
+        y_vals = self.current_amplitude_period_space[
+            (self.current_sample_period_space >= xlim[0])
+            & (self.current_sample_period_space < xlim[1]),
         ]
         y_vals_max = y_vals.max()
         y_vals_min = y_vals.min()
@@ -391,7 +444,7 @@ class _ExploreParams:
         """Update title of the figure with parameter information."""
         self.figure.suptitle(
             r"$\bf{PARRM\ Filter\ Parameter\ Explorer}$"
-            f"\nfilter half width: {self.current_filter_half_width} | "
+            f"\n\nfilter half width: {self.current_filter_half_width} | "
             f"period half width: {self.current_period_half_width:.3f} | "
             f"samples omitted: {self.current_omit_n_samples} | "
             f"filter direction: {self.current_filter_direction}\n"
@@ -417,7 +470,7 @@ class _ExploreParams:
             self.times,
             self.filtered_data_time[self.current_channel_idx],
             linewidth=0.5,
-            color="orange",
+            color="#ff7f0e",
             label="Filtered data",
         )[0]
         self.time_data_axis.legend(loc="upper left")
@@ -432,7 +485,7 @@ class _ExploreParams:
         self.filtered_data_line_freq = self.freq_data_axis.plot(
             self.freqs,
             self.filtered_data_freq,
-            color="orange",
+            color="#ff7f0e",
             label="Filtered data",
         )[0]
         self.freq_data_axis.relim()

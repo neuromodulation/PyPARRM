@@ -476,8 +476,18 @@ class PARRM:
 
         return residuals**2, beta**2
 
-    def explore_filter_params(self, frequency_res: int | float = 2.0) -> None:
-        """Create an interactive plot to explore filter parameters."""
+    def explore_filter_params(self, frequency_res: int | float = 5.0) -> None:
+        """Create an interactive plot to explore filter parameters.
+
+        Parameters
+        ----------
+        frequency_res : int | float (default 5.0)
+            Frequency resolution, in Hz, to use when computing the power
+            spectra of the data. Must be > 0 and <= the Nyquist frequency.
+        """
+        if self._verbose:
+            print("Opening the filter parameter explorer...")
+
         if self._period is None:
             raise ValueError(
                 "The period has not yet been estimated. The `find_period` "
@@ -485,6 +495,9 @@ class PARRM:
             )
         param_explorer = _ExploreParams(self, frequency_res)
         param_explorer.create_plot()
+
+        if self._verbose:
+            print("    ... Filter parameter explorer closed\n")
 
     def create_filter(
         self,
