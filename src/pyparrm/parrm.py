@@ -1,10 +1,10 @@
 """Tools for fitting PARRM filters to data."""
 
 from copy import deepcopy
-from functools import partial
-from multiprocessing import Pool, cpu_count
+from multiprocessing import cpu_count
 
 import numpy as np
+from pqdm.processes import pqdm
 from scipy.optimize import fmin
 from scipy.signal import convolve2d
 
@@ -314,18 +314,26 @@ class PARRM:
                 )
             periods = np.unique(periods)
 
-            with Pool(self._n_jobs) as pool:
-                results = pool.map_async(
-                    partial(
-                        self._optimise_local,
-                        data=self._standard_data,
-                        indices=indices,
-                        bandwidth=bandwidth,
-                        lambda_=lambda_,
-                    ),
-                    periods,
+            optimise_local_args = [
+                {
+                    "period": period,
+                    "data": self._standard_data,
+                    "indices": indices,
+                    "bandwidth": bandwidth,
+                    "lambda_": lambda_,
+                }
+                for period in periods
+            ]
+            v = np.array(
+                pqdm(
+                    optimise_local_args,
+                    self._optimise_local,
+                    self._n_jobs,
+                    argument_type="kwargs",
+                    desc="Optimising period estimates",
+                    disable=not self._verbose,
                 )
-                v = np.array(results.get())
+            )
 
             v_idcs = v.argsort()
             v = v[v_idcs]
@@ -336,21 +344,29 @@ class PARRM:
                     "that your data does not contain NaNs."
                 )
 
-            for iter_idx in range(np.min((5, periods.shape[0]))):
-                periods[iter_idx], v[iter_idx], _, _, _ = fmin(
-                    self._optimise_local,
-                    periods[iter_idx],
-                    (
-                        self._standard_data,
-                        indices,
-                        bandwidth,
-                        lambda_,
-                    ),
-                    full_output=True,
-                    disp=False,
-                )
-
-                stim_period = periods[v.argmin()]
+            n_iters = np.min((5, periods.shape[0]))
+            fmin_args = [
+                {
+                    "func": self._optimise_local,
+                    "x0": period,
+                    "args": (self._standard_data, indices, bandwidth, lambda_),
+                    "full_output": True,
+                    "disp": False,
+                }
+                for period in periods[:n_iters]
+            ]
+            output = pqdm(
+                fmin_args,
+                fmin,
+                self._n_jobs,
+                argument_type="kwargs",
+                desc="Optimising period estimates",
+                disable=not self._verbose,
+            )
+            for iter_idx in range(n_iters):
+                periods[iter_idx] = output[iter_idx][0]
+                v[iter_idx] = output[iter_idx][1]
+            stim_period = periods[v.argmin()]
 
             run_idx += 1
 
@@ -520,7 +536,7 @@ class PARRM:
         return residuals**2, beta**2
 
     def explore_filter_params(
-        self, frequency_res: int | float = 5.0, n_jobs: int = 1
+        self, freq_res: int | float = 5.0, n_jobs: int = 1
     ) -> None:
         """Create an interactive plot to explore filter parameters.
 
@@ -529,7 +545,7 @@ class PARRM:
 
         Parameters
         ----------
-        frequency_res : int | float (default 5.0)
+        freq_res : int | float (default 5.0)
             Frequency resolution, in Hz, to use when computing the power
             spectra of the data. Must be > 0 and <= the Nyquist frequency.
 
@@ -546,7 +562,7 @@ class PARRM:
                 "The period has not yet been estimated. The `find_period` "
                 "method must be called first."
             )
-        param_explorer = _ExploreParams(self, frequency_res, n_jobs)
+        param_explorer = _ExploreParams(self, freq_res, n_jobs)
         param_explorer.plot()
 
         if self._verbose:

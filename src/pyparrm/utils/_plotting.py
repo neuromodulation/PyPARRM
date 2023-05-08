@@ -19,7 +19,7 @@ class _ExploreParams:
         PARRM object containing the data for which filter parameters should be
         explored.
 
-    frequency_res : int | float (default 1.0)
+    freq_res : int | float (default 1.0)
         Frequency resolution, in Hz, to use when computing the power spectra of
         the data.
 
@@ -35,7 +35,7 @@ class _ExploreParams:
     """
 
     parrm = None
-    frequency_res = None
+    freq_res = None
     n_jobs = None
 
     figure = None
@@ -76,13 +76,13 @@ class _ExploreParams:
     unfiltered_data_line_freq = None
 
     def __init__(
-        self, parrm, frequency_res: int | float = 5.0, n_jobs: int = 1
+        self, parrm, freq_res: int | float = 5.0, n_jobs: int = 1
     ) -> None:
-        self._check_sort_init_inputs(parrm, frequency_res, n_jobs)
+        self._check_sort_init_inputs(parrm, freq_res, n_jobs)
         self._initialise_parrm_data_info()
 
     def _check_sort_init_inputs(
-        self, parrm, frequency_res: float, n_jobs: int
+        self, parrm, freq_res: float, n_jobs: int
     ) -> None:
         """Check and sort init. inputs."""
         assert parrm._period is not None, (
@@ -107,18 +107,13 @@ class _ExploreParams:
             ]
         )
 
-        if not isinstance(frequency_res, int) and not isinstance(
-            frequency_res, float
-        ):
-            raise TypeError("`frequency_res` must be an int or a float.")
-        if (
-            frequency_res <= 0
-            or frequency_res > self.parrm._sampling_freq // 2
-        ):
+        if not isinstance(freq_res, int) and not isinstance(freq_res, float):
+            raise TypeError("`freq_res` must be an int or a float.")
+        if freq_res <= 0 or freq_res > self.parrm._sampling_freq // 2:
             raise ValueError(
-                "`frequency_res`must be > 0 and <= the Nyquist frequency."
+                "`freq_res`must be > 0 and <= the Nyquist frequency."
             )
-        self.frequency_res = deepcopy(frequency_res)
+        self.freq_res = deepcopy(freq_res)
 
         if not isinstance(n_jobs, int):
             raise TypeError("`n_jobs` must be an int.")
@@ -149,7 +144,7 @@ class _ExploreParams:
         )
 
         # freq data info.
-        n_freqs = int((self.parrm._sampling_freq // 2) // self.frequency_res)
+        n_freqs = int((self.parrm._sampling_freq // 2) // self.freq_res)
         self.freqs = np.abs(
             np.fft.fftfreq(n_freqs * 2, 1 / self.parrm._sampling_freq)[
                 1 : n_freqs + 1
