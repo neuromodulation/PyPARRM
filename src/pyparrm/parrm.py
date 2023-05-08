@@ -1,6 +1,8 @@
 """Tools for fitting PARRM filters to data."""
 
 from copy import deepcopy
+from functools import partial
+from multiprocessing import Pool, cpu_count
 
 import numpy as np
 from scipy.optimize import fmin
@@ -123,6 +125,7 @@ class PARRM:
         assumed_periods: int | float | tuple[int | float] | None = None,
         outlier_boundary: int | float = 3.0,
         random_seed: int | None = None,
+        n_jobs: int = 1,
     ) -> None:
         """Find the period of the artefacts.
 
@@ -144,6 +147,12 @@ class PARRM:
             Seed to use when generating indices of samples to search for the
             period. Only used if the number of available samples is less than
             the number of requested samples.
+
+        n_jobs : int (default 1)
+            Number of jobs to run in parallel when optimising the period
+            estimates. Must be less than the number of available CPUs and
+            greater than 0 (unless it is -1, in which case all available CPUs
+            are used).
         """  # noqa E501
         if self._verbose:
             print("\nFinding the artefact period...")
@@ -151,7 +160,11 @@ class PARRM:
         self._reset_result_attrs()
 
         self._check_sort_find_stim_period_inputs(
-            search_samples, assumed_periods, outlier_boundary, random_seed
+            search_samples,
+            assumed_periods,
+            outlier_boundary,
+            random_seed,
+            n_jobs,
         )
 
         self._standardise_data()
@@ -183,6 +196,7 @@ class PARRM:
         assumed_periods: int | float | tuple[int | float] | None,
         outlier_boundary: int | float,
         random_seed: int | None,
+        n_jobs: int,
     ) -> None:
         """Check and sort `find_stim_period` inputs."""
         if search_samples is not None and not isinstance(
@@ -230,6 +244,18 @@ class PARRM:
             raise TypeError("`random_seed` must be an int or None.")
         if random_seed is not None:
             self._random_seed = deepcopy(random_seed)
+
+        if not isinstance(n_jobs, int):
+            raise TypeError("`n_jobs` must be an int.")
+        if n_jobs > cpu_count():
+            raise ValueError(
+                "`n_jobs` must be <= the number of available CPUs."
+            )
+        if n_jobs < 0 and n_jobs != -1:
+            raise ValueError("If `n_jobs` is < 0, it must be -1.")
+        if n_jobs == -1:
+            n_jobs = cpu_count()
+        self._n_jobs = deepcopy(n_jobs)
 
     def _standardise_data(self) -> None:
         """Standardise data to have S.D. of 1 and clipped outliers."""
@@ -288,43 +314,41 @@ class PARRM:
                 )
             periods = np.unique(periods)
 
-            v = np.full_like(periods, fill_value=np.inf)
-            valid = False
-            for period_idx, period in enumerate(periods):
-                output = self._optimise_local(
-                    period,
-                    self._standard_data,
-                    indices,
-                    bandwidth,
-                    lambda_,
-                )
-                if not isinstance(output, np.linalg.LinAlgError):
-                    v[period_idx] = output
-                    valid = True
-
-            if valid:
-                v_idcs = v.argsort()
-                v = v[v_idcs]
-                periods = periods[v_idcs[v != np.inf]]  # ignore invalid `v`s
-                if periods.shape == (0,):  # if no valid periods
-                    raise ValueError(
-                        "The period cannot be estimated from the data. Check "
-                        "that your data does not contain NaNs."
-                    )
-
-                for iter_idx in range(np.min((5, periods.shape[0]))):
-                    periods[iter_idx], v[iter_idx], _, _, _ = fmin(
+            with Pool(self._n_jobs) as pool:
+                results = pool.map_async(
+                    partial(
                         self._optimise_local,
-                        periods[iter_idx],
-                        (
-                            self._standard_data,
-                            indices,
-                            bandwidth,
-                            lambda_,
-                        ),
-                        full_output=True,
-                        disp=False,
-                    )
+                        data=self._standard_data,
+                        indices=indices,
+                        bandwidth=bandwidth,
+                        lambda_=lambda_,
+                    ),
+                    periods,
+                )
+                v = np.array(results.get())
+
+            v_idcs = v.argsort()
+            v = v[v_idcs]
+            periods = periods[v_idcs[v != np.inf]]  # ignore invalid `v`s
+            if periods.shape == (0,):  # if no valid periods
+                raise ValueError(
+                    "The period cannot be estimated from the data. Check "
+                    "that your data does not contain NaNs."
+                )
+
+            for iter_idx in range(np.min((5, periods.shape[0]))):
+                periods[iter_idx], v[iter_idx], _, _, _ = fmin(
+                    self._optimise_local,
+                    periods[iter_idx],
+                    (
+                        self._standard_data,
+                        indices,
+                        bandwidth,
+                        lambda_,
+                    ),
+                    full_output=True,
+                    disp=False,
+                )
 
                 stim_period = periods[v.argmin()]
 
@@ -433,19 +457,19 @@ class PARRM:
         ``period`` must be the first input argument for scipy.optimize.fmin to
         work on this function.
         """
-        f = 0
+        f = 0.0
 
         s = np.arange(1, 2 * bandwidth + 2)
         s = lambda_ * s / s.sum()
 
         for data_chan in data:
-            output = self._fit_waves_to_data(
+            residuals, beta = self._fit_waves_to_data(
                 data_chan[indices], indices, period, bandwidth
             )
-            if isinstance(output, np.linalg.LinAlgError):
-                return output
+            if isinstance(residuals, float):
+                return np.inf
 
-            f += output[0].mean() + s @ output[1]
+            f += residuals.mean() + s @ beta
 
         return f / self._n_chans
 
@@ -455,7 +479,7 @@ class PARRM:
         indices: np.ndarray,
         period: float,
         n_waves: int,
-    ) -> tuple[np.ndarray, np.ndarray] | np.linalg.LinAlgError:
+    ) -> tuple[np.ndarray, np.ndarray] | tuple[float, float]:
         """Fit sine and cosine waves to the data.
 
         Parameters
@@ -488,8 +512,8 @@ class PARRM:
 
         try:  # ignores LinAlgError for singular matrices
             beta = np.linalg.solve(waves.T @ waves, waves.T @ data)
-        except np.linalg.LinAlgError as error:
-            return error
+        except np.linalg.LinAlgError:
+            return np.inf, np.inf
 
         residuals = data - waves @ beta
 
