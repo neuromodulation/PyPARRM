@@ -24,7 +24,9 @@ class _ExploreParams:
         the data.
 
     n_jobs : int (default 1)
-        Number of jobs to run in parallel when computing power spectra.
+        Number of jobs to run in parallel when computing power spectra. Must be
+        less than the number of available CPUs and greater than 0 (unless it is
+        -1, in which case all available CPUs are used).
 
     Methods
     -------
