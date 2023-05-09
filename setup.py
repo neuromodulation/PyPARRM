@@ -6,5 +6,5 @@ setup(
     name="pyparrm",
     version="0.0.1dev",
     package_dir={"": "src/"},
-    packages=["pyparrm"],
+    packages=["pyparrm", "pyparrm._utils"],
 )

@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from matplotlib.widgets import RadioButtons, Slider
 import numpy as np
 
-from pyparrm.utils._power import compute_psd
+from pyparrm._utils._power import compute_psd
 
 
 class _ExploreParams:

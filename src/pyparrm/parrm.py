@@ -8,7 +8,7 @@ from pqdm.threads import pqdm
 from scipy.optimize import fmin
 from scipy.signal import convolve2d
 
-from pyparrm.utils._plotting import _ExploreParams
+from pyparrm._utils._plotting import _ExploreParams
 
 
 class PARRM:
