@@ -1,3 +1,3 @@
-__version__ = "0.0.1dev"
+__version__ = "1.0.0"
 
 from .parrm import PARRM

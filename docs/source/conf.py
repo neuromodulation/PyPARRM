@@ -13,10 +13,10 @@ import pyparrm
 from pyparrm._utils._docs import linkcode_resolve
 
 
-project = "pyparrm"
+project = "PyPARRM"
 copyright = "2023, Thomas Samuel Binns"
 author = "Thomas Samuel Binns"
-release = "dev"
+release = "1.0.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -83,7 +83,6 @@ autodoc_member_order = "bysource"
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable", None),
-    "numba": ("https://numba.readthedocs.io/en/latest", None),
 }
 
 

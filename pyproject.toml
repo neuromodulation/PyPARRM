@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyparrm"
-version = "0.0.1dev"
+version = "1.0.0"
 authors = [
     { name="Thomas Samuel Binns", email="t.s.binns@outlook.com" }
 ]
@@ -18,7 +18,10 @@ classifiers = [
 ]
 
 dependencies = [
-    "numpy"
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "pqdm"
 ]
 
 [project.optional-dependencies]
@@ -39,5 +42,5 @@ dev = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/icneuromodulation/PyPARRM"
-"Bug Tracker" = "https://github.com/icneuromodulation/PyPARRM/issues"
+"Homepage" = "https://github.com/neuromodulation/PyPARRM"
+"Bug Tracker" = "https://github.com/neuromodulation/PyPARRM/issues"
