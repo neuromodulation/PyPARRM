@@ -8,7 +8,7 @@ version = "0.0.1dev"
 authors = [
     { name="Thomas Samuel Binns", email="t.s.binns@outlook.com" }
 ]
-description = "A Python port of the PARRM method for stimulation artefact removal."
+description = "A Python port of the PARRM algorithm"
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
