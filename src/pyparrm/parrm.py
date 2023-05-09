@@ -4,7 +4,7 @@ from copy import deepcopy
 from multiprocessing import cpu_count
 
 import numpy as np
-from pqdm.processes import pqdm
+from pqdm.threads import pqdm
 from scipy.optimize import fmin
 from scipy.signal import convolve2d
 
@@ -41,7 +41,7 @@ class PARRM:
 
     Methods
     -------
-    find_periods
+    find_period
         Find the period of the artefacts.
 
     explore_filter_params
@@ -553,6 +553,11 @@ class PARRM:
             Number of jobs to run in parallel when computing the power spectra.
             Must be < the number of available CPUs and > 0 (unless it is -1, in
             which case all available CPUs are used).
+
+        Notes
+        -----
+        It is recommended that you call this method from a script; behaviour in
+        notebooks is not guaranteed!
         """
         if self._verbose:
             print("Opening the filter parameter explorer...")
@@ -564,9 +569,6 @@ class PARRM:
             )
         param_explorer = _ExploreParams(self, freq_res, n_jobs)
         param_explorer.plot()
-
-        if self._verbose:
-            print("    ... Filter parameter explorer closed\n")
 
     def create_filter(
         self,

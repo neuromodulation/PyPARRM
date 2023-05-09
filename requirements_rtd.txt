@@ -1,4 +1,7 @@
 numpy
+scipy
+matplotlib
+pqdm
 sphinx
 numpydoc
 nbsphinx

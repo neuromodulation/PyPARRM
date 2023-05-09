@@ -1,7 +1,7 @@
 """Tools for computing signal power."""
 
 import numpy as np
-from scipy.fft import fft
+from scipy.fft import fft  # should be faster than numpy for real-val'd inputs
 
 
 def compute_psd(
