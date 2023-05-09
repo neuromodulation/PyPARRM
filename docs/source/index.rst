@@ -1,14 +1,9 @@
 .. title:: Home
 
-.. define new line for html
-.. |br| raw:: html
+=======
+PyPARRM
+=======
 
-   <br />
-
-.. image:: https://tsbinns.com/assets/pyparrm/logo.gif
-   :alt: PyPARRM
-
-|br|
 A Python signal processing package for identifying and removing stimulation
 artefacts from electrophysiological data using the Period-based Artefact
 Reconstruction and Removal Method (PARRM) of Dastin-van Rijn *et al.* (2021;
