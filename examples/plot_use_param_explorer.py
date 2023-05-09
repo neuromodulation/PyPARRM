@@ -102,7 +102,7 @@ if False:  # example of method use without actually calling it
     parrm.explore_filter_params(freq_res=5)
 
 ###############################################################################
-# .. figure:: ../../../../../examples/param_explorer.png
+# .. figure:: ../../_static/param_explorer.png
 #    :alt: parameter explorer window overview
 #
 #    An overview of the parameter explorer window features
