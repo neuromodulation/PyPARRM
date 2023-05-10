@@ -107,12 +107,16 @@ class PARRM:
             sampling_freq, float
         ):
             raise TypeError("`sampling_freq` must be an int or a float.")
+        if sampling_freq <= 0:
+            raise ValueError("`sampling_freq` must be > 0.")
         self._sampling_freq = deepcopy(sampling_freq)
 
         if not isinstance(artefact_freq, int) and not isinstance(
             artefact_freq, float
         ):
             raise TypeError("`artefact_freq` must be an int or a float.")
+        if artefact_freq <= 0:
+            raise ValueError("`artefact_freq` must be > 0.")
         self._artefact_freq = deepcopy(artefact_freq)
 
         if not isinstance(verbose, bool):
@@ -238,6 +242,8 @@ class PARRM:
 
         if not isinstance(outlier_boundary, (int, float)):
             raise TypeError("`outlier_boundary` must be an int or a float.")
+        if outlier_boundary <= 0:
+            raise ValueError("`outlier_boundary` must be > 0.")
         self._outlier_boundary = deepcopy(outlier_boundary)
 
         if random_seed is not None and not isinstance(random_seed, int):
@@ -575,7 +581,7 @@ class PARRM:
         filter_half_width: int | None = None,
         omit_n_samples: int = 0,
         filter_direction: str = "both",
-        period_half_width: float | None = None,
+        period_half_width: int | float | None = None,
     ) -> None:
         """Create the PARRM filter for removing the stimulation artefacts.
 
@@ -597,7 +603,7 @@ class PARRM:
             backward and forward samples; "past" for backward samples only; and
             "future" for forward samples only.
 
-        period_half_width : float | None (default None)
+        period_half_width : int | float | None (default None)
             Half-width of the window in samples of period space for which
             points at a similar location in the waveform will be averaged. If
             ``None``, :attr:`period` / 50 is used.
@@ -788,9 +794,9 @@ class PARRM:
                 "sampling_freq": self._sampling_freq,
                 "artefact_freq": self._artefact_freq,
             },
-            "stim_period": {
+            "period": {
                 "search_samples": self._search_samples,
-                "assumed_period": self._assumed_periods,
+                "assumed_periods": self._assumed_periods,
                 "outlier_bound": self._outlier_boundary,
                 "random_seed": self._random_seed,
             },
