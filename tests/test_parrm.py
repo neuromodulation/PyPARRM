@@ -68,7 +68,9 @@ def test_parrm_attrs():
     settings = parrm.settings
     assert settings["data"]["sampling_freq"] == sampling_freq
     assert settings["data"]["artefact_freq"] == artefact_freq
-    assert settings["period"]["search_samples"] == parrm._search_samples
+    assert np.all(
+        settings["period"]["search_samples"] == parrm._search_samples
+    )
     assert settings["period"]["assumed_periods"] == parrm._assumed_periods
     assert settings["period"]["outlier_boundary"] == parrm._outlier_boundary
     assert settings["period"]["random_seed"] == parrm._random_seed
