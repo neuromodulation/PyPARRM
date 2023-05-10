@@ -64,6 +64,8 @@ class _ExploreParams:
     current_sample_period_yvals = None
     current_sample_period_xvals = None
 
+    filter_error_text = None
+
     times = None
     filtered_data_time = None
     filtered_data_line_time = None
@@ -107,7 +109,7 @@ class _ExploreParams:
             ]
         )
 
-        if not isinstance(freq_res, int) and not isinstance(freq_res, float):
+        if not isinstance(freq_res, (int, float)):
             raise TypeError("`freq_res` must be an int or a float.")
         if freq_res <= 0 or freq_res > self.parrm._sampling_freq // 2:
             raise ValueError(
@@ -509,8 +511,16 @@ class _ExploreParams:
         self.parrm._period_half_width = self.current_period_half_width
         self.parrm._omit_n_samples = self.current_omit_n_samples
         self.parrm._filter_direction = self.current_filter_direction
-        self.parrm._generate_filter()
-        self.filtered_data_time = self.parrm.filter_data()
+
+        self.valid_filter = True
+        try:
+            self.parrm._generate_filter()
+        except RuntimeError:
+            self.valid_filter = False
+
+        if self.valid_filter:
+            self.filtered_data_time = self.parrm.filter_data()
+
         self._update_filtered_data_lines()
 
     def _update_unfiltered_data_lines(self) -> None:
@@ -538,33 +548,59 @@ class _ExploreParams:
 
     def _update_filtered_data_lines(self) -> None:
         """Update plotted PARRM-filtered data."""
-        # timeseries data
-        self.filtered_data_line_time.remove()  # clear old line
-        self.filtered_data_line_time = self.time_data_axis.plot(
-            self.times,
-            self.filtered_data_time[self.current_channel_idx],
-            linewidth=0.5,
-            color="#ff7f0e",
-            label="Filtered data",
-        )[0]
-        self.time_data_axis.relim()
-        self.time_data_axis.autoscale_view(scalex=False, scaley=True)
+        try:  # clear old lines, if they exist
+            self.filtered_data_line_time.remove()
+            self.filtered_data_line_freq.remove()
+        except ValueError:
+            pass
 
-        # frequency data
-        self.filtered_data_freq = compute_psd(
-            self.filtered_data_time[self.current_channel_idx],
-            self.parrm._sampling_freq,
-            self.freqs.shape[0],
-        )
-        self.filtered_data_line_freq.remove()  # clear old line
-        self.filtered_data_line_freq = self.freq_data_axis.plot(
-            self.freqs,
-            self.filtered_data_freq,
-            color="#ff7f0e",
-            label="Filtered data",
-        )[0]
-        self.freq_data_axis.relim()
-        self.freq_data_axis.autoscale_view(scalex=False, scaley=True)
+        if self.valid_filter:
+            if self.filter_error_text is not None:  # clear old warning text
+                self.time_data_axis.texts[0].remove()
+                self.filter_error_text = None
+            # timeseries data
+            self.filtered_data_line_time = self.time_data_axis.plot(
+                self.times,
+                self.filtered_data_time[self.current_channel_idx],
+                linewidth=0.5,
+                color="#ff7f0e",
+                label="Filtered data",
+            )[0]
+            self.time_data_axis.relim()
+            self.time_data_axis.autoscale_view(scalex=False, scaley=True)
+
+            # frequency data
+            self.filtered_data_freq = compute_psd(
+                self.filtered_data_time[self.current_channel_idx],
+                self.parrm._sampling_freq,
+                self.freqs.shape[0],
+            )
+            self.filtered_data_line_freq = self.freq_data_axis.plot(
+                self.freqs,
+                self.filtered_data_freq,
+                color="#ff7f0e",
+                label="Filtered data",
+            )[0]
+            self.freq_data_axis.relim()
+            self.freq_data_axis.autoscale_view(scalex=False, scaley=True)
+        else:
+            xlim = self.time_data_axis.get_xlim()
+            xlim_mid = xlim[0] + ((xlim[1] - xlim[0]) / 2)
+            ylim = self.time_data_axis.get_ylim()
+            ylim_mid = ylim[0] + ((ylim[1] - ylim[0]) / 2)
+            self.filter_error_text = self.time_data_axis.text(
+                xlim_mid,
+                ylim_mid,
+                "The filter cannot be generated with the current settings",
+                fontsize=10,
+                fontweight="bold",
+                backgroundcolor="red",
+                horizontalalignment="center",
+                verticalalignment="center",
+            )
+            # hide old lines
+            self.filtered_data_line_time.set_visible(False)
+            self.filtered_data_line_freq.set_visible(False)
 
     def _update_sample_period_overview_ylim(self) -> None:
         """Update ylim of sample-period modulus overview plot."""

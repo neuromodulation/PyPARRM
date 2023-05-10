@@ -103,17 +103,13 @@ class PARRM:
             raise ValueError("`data` must be a 2D array.")
         self._data = data.copy()
 
-        if not isinstance(sampling_freq, int) and not isinstance(
-            sampling_freq, float
-        ):
+        if not isinstance(sampling_freq, (int, float)):
             raise TypeError("`sampling_freq` must be an int or a float.")
         if sampling_freq <= 0:
             raise ValueError("`sampling_freq` must be > 0.")
         self._sampling_freq = deepcopy(sampling_freq)
 
-        if not isinstance(artefact_freq, int) and not isinstance(
-            artefact_freq, float
-        ):
+        if not isinstance(artefact_freq, (int, float)):
             raise TypeError("`artefact_freq` must be an int or a float.")
         if artefact_freq <= 0:
             raise ValueError("`artefact_freq` must be > 0.")
@@ -634,19 +630,22 @@ class PARRM:
         filter_half_width: int,
         omit_n_samples: int,
         filter_direction: str,
-        period_half_width: float,
+        period_half_width: int | float,
     ) -> None:
         """Check and sort `create_filter` inputs."""
         if not isinstance(omit_n_samples, int):
             raise TypeError("`omit_n_samples` must be an int.")
-        if omit_n_samples < 0:
-            raise ValueError("`omit_n_samples` must be >= 0.")
+        if omit_n_samples < 0 or omit_n_samples >= (self._n_samples - 1) // 2:
+            raise ValueError(
+                "`omit_n_samples` must lie in the range [0, (no. of samples - "
+                "1) // 2]."
+            )
         self._omit_n_samples = deepcopy(omit_n_samples)
 
         if period_half_width is None:
             period_half_width = self._period / 50
-        if not isinstance(period_half_width, float):
-            raise TypeError("`period_half_width` must be a float.")
+        if not isinstance(period_half_width, (int, float)):
+            raise TypeError("`period_half_width` must be an int or a float.")
         if period_half_width > self._period:
             raise ValueError("`period_half_width` must be <= the period.")
         self._period_half_width = deepcopy(period_half_width)
@@ -658,10 +657,9 @@ class PARRM:
             raise TypeError("`filter_half_width` must be an int.")
         if filter_half_width <= omit_n_samples:
             raise ValueError("`filter_half_width` must be > `omit_n_samples`.")
-        if filter_half_width > ((self._n_samples - 1) // 2) - omit_n_samples:
+        if filter_half_width > ((self._n_samples - 1) // 2):
             raise ValueError(
-                "`filter_half_width` must be <= ((no. of samples - 1) // 2) - "
-                "`omit_n_samples`"
+                "`filter_half_width` must be <= ((no. of samples - 1) // 2)"
             )
         self._filter_half_width = deepcopy(filter_half_width)
 
@@ -678,7 +676,7 @@ class PARRM:
         """Get appropriate `filter_half_width`, if None given."""
         filter_half_width = deepcopy(self._omit_n_samples)
         check = 0
-        while check < 50 and filter_half_width < 10e5:
+        while check < 50 and filter_half_width < (self._n_samples - 1) // 2:
             filter_half_width += 1
             modulus = np.mod(filter_half_width, self._period)
             if (
@@ -710,9 +708,17 @@ class PARRM:
         elif self._filter_direction == "future":
             filter_[window <= 0] = 0
 
+        if np.all(filter_ == np.zeros_like(filter_)):
+            raise RuntimeError(
+                "A suitable filter cannot be created with the specified "
+                "settings. Try reducing the number of omitted samples and/or "
+                "increasing the filter half-width."
+            )
+
         filter_ = -filter_ / np.max(
             (filter_.sum(), np.finfo(filter_.dtype).eps)
         )
+
         filter_[window == 0] = 1
 
         self._filter = filter_
