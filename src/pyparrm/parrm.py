@@ -803,7 +803,7 @@ class PARRM:
             "period": {
                 "search_samples": self._search_samples,
                 "assumed_periods": self._assumed_periods,
-                "outlier_bound": self._outlier_boundary,
+                "outlier_boundary": self._outlier_boundary,
                 "random_seed": self._random_seed,
             },
             "filter": {
