@@ -170,18 +170,15 @@ fig.tight_layout()
 fig.show()
 
 ###############################################################################
-# Python vs. MATLAB implementation differences
-# --------------------------------------------
-# Whilst the Python and MATLAB implementations of PARRM give extremely similar
-# results, rounding errors in floating point numbers mean that the results are
-# not perfectly identical. Across the entire ~100 second duration of this
-# recording, however, the total deviation between the implementations is only
-# around 0.7 mV.
-#
-# Comparing the deviation between the different implementations and the
-# artefact-free data, one can see that both deviate by only ~2 mV. Accordingly,
-# either implementation is suitable for identifying and removing stimulation
-# artefacts from electrophysiological recordings.
+# Python vs. MATLAB implementation comparison
+# -------------------------------------------
+# Due to rounding errors, the final filtered data timeseries of PyPARRM and the
+# MATLAB implementation are not perfectly identical (as shown by the failure of
+# :func:`numpy.all`), however they are extremely close (as shown by the success
+# of :func:`numpy.allclose`). Visual inspection of the plots further
+# demonstrates this similarity. Accordingly, both implementations are suitable
+# for identifying and removing stimulation artefacts from electrophysiological
+# recordings.
 
 # %%
 
@@ -216,14 +213,11 @@ axis.indicate_inset_zoom(inset_axis, edgecolor="black", alpha=0.4)
 fig.tight_layout()
 fig.show()
 
-# Euclidean distances across whole recording
 print(
-    "Deviation between Python and MATLAB implementations: "
-    f"{np.linalg.norm(filtered_data - matlab_filtered):.1f} mV\n\n"
-    "Deviation between PyPARRM-filtered and artefact-free data: "
-    f"{np.linalg.norm(filtered_data - artefact_free):.1f} mV\n"
-    "Deviation between MATLAB PARRM-filtered and artefact-free data: "
-    f"{np.linalg.norm(matlab_filtered - artefact_free):.1f} mV\n"
+    "Are the results of the implementations identical? "
+    f"{np.all(filtered_data == matlab_filtered)}\n\n"
+    "Are the results of the implementations extremely close? "
+    f"{np.allclose(filtered_data, matlab_filtered)}"
 )
 
 ###############################################################################
