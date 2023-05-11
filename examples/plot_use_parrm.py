@@ -123,10 +123,13 @@ print(f"Estimated artefact period: {parrm.period:.4f}")
 #
 # Once the filter has been created, it can be applied using the
 # :meth:`filter_data <pyparrm.parrm.PARRM.filter_data>` method, which returns
-# the artefact-free data. The filter itself, as well as a copy of the filtered
-# data, can be accessed from the :attr:`filter <pyparrm.parrm.PARRM.filter>`
-# and :attr:`filtered_data <pyparrm.parrm.PARRM.filtered_data>` attributes,
-# respectfully.
+# the artefact-free data. By default,
+# :meth:`filter_data <pyparrm.parrm.PARRM.filter_data>` will filter the data
+# stored in the :class:`PARRM <pyparrm.parrm.PARRM>` object, however other data
+# can be provided should you wish to filter this instead. The filter itself, as
+# well as a copy of the filtered data, can be accessed from the :attr:`filter
+# <pyparrm.parrm.PARRM.filter>` and :attr:`filtered_data
+# <pyparrm.parrm.PARRM.filtered_data>` attributes, respectfully.
 
 # %%
 
@@ -136,7 +139,22 @@ parrm.create_filter(
     filter_direction="both",
     period_half_width=0.01,
 )
-filtered_data = parrm.filter_data()
+filtered_data = parrm.filter_data()  # other data to filter can be given here
+
+###############################################################################
+# Inspecting the results
+# ----------------------
+# Having filtered the data, we can now compare the results to the original
+# data, as well as the artefact-free form of this simulated data to see how
+# well the method is able to remove the underlying artefacts.
+#
+# As you can see, the filtered timeseries data closely resembles the true
+# artefact-free data. Furthermore, inspecting the power spectra shows just how
+# well PARRM is able to attentuate the overwhelming power at the 50 Hz
+# subharmonic of the stimulation artefacts, again bringing the results closely
+# in line with those of the true artefact-free data.
+
+# %%
 
 # comparison to true artefact-free data
 artefact_free = np.load("example_data_artefact_free.npy")
@@ -144,27 +162,51 @@ start = 598  # same start time as MATLAB example
 end = 1011  # same end time as MATLAB example
 times = np.arange(end - start) / sampling_freq
 
-fig, axis = plt.subplots(1, 1)
-inset_axis = axis.inset_axes((0.12, 0.6, 0.5, 0.35))
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+inset_axis = axes[0].inset_axes((0.12, 0.6, 0.5, 0.35))
 
-# main plot
-axis.plot(
+# main timeseries plot
+axes[0].plot(
     times, data[0, start:end], color="black", alpha=0.3, label="Unfiltered"
 )
-axis.plot(
+axes[0].plot(
     times, artefact_free[0, start:end], linewidth=3, label="Artefact-free"
 )
-axis.plot(times, filtered_data[0, start:end], label="Filtered (PyPARRM)")
-axis.legend()
-axis.set_xlabel("Time (s)")
-axis.set_ylabel("Amplitude (mV)")
-axis.set_title("PARRM Filtered vs. Artefact-free")
+axes[0].plot(times, filtered_data[0, start:end], label="Filtered (PyPARRM)")
+axes[0].legend()
+axes[0].set_xlabel("Time (s)")
+axes[0].set_ylabel("Amplitude (mV)")
 
-# inset plot
+# timeseries inset plot
 inset_axis.plot(times[:50], artefact_free[0, start : start + 50], linewidth=3)
 inset_axis.plot(times[:50], filtered_data[0, start : start + 50])
-axis.indicate_inset_zoom(inset_axis, edgecolor="black", alpha=0.4)
+axes[0].indicate_inset_zoom(inset_axis, edgecolor="black", alpha=0.4)
 inset_axis.patch.set_alpha(0.7)
+
+# power spectral density plot
+from pyparrm._utils._power import compute_psd
+
+n_freqs = sampling_freq // 2
+psd_freqs = np.abs(
+    np.fft.fftfreq(n_freqs * 2, 1 / sampling_freq)[1 : n_freqs + 1]
+)
+
+psd_raw = compute_psd(data[0, start:end], sampling_freq, n_freqs)
+psd_filtered = compute_psd(filtered_data[0, start:end], sampling_freq, n_freqs)
+psd_artefact_free = compute_psd(
+    artefact_free[0, start:end], sampling_freq, n_freqs
+)
+
+axes[1].loglog(
+    psd_freqs, psd_raw, color="black", alpha=0.3, label="Unfiltered"
+)
+axes[1].loglog(
+    psd_freqs, psd_artefact_free, linewidth=3, label="Artefact-free"
+)
+axes[1].loglog(psd_freqs, psd_filtered, label="Filtered (PyPARRM)")
+axes[1].legend()
+axes[1].set_xlabel("Log frequency (Hz)")
+axes[1].set_ylabel("Log power (dB/Hz)")
 
 fig.tight_layout()
 fig.show()
