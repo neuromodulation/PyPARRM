@@ -260,14 +260,12 @@ class PARRM:
         self._n_jobs = deepcopy(n_jobs)
 
     def _standardise_data(self) -> None:
-        """Standardise data to have S.D. of 1 and clipped outliers."""
-        standard_data = np.diff(self._data, axis=1)  # derivatives of data
-        standard_data /= np.mean(np.abs(standard_data), axis=1)[
-            :, None
-        ]  # S.D. == 1
+        """Take derivatives of data, set S.D. to 1, and clip outliers."""
+        standard_data = np.diff(self._data, axis=1)
+        standard_data /= np.mean(np.abs(standard_data), axis=1)[:, None]
         standard_data = np.clip(
             standard_data, -self._outlier_boundary, self._outlier_boundary
-        )  # clip outliers
+        )
 
         self._standard_data = standard_data
 
@@ -275,7 +273,7 @@ class PARRM:
         """Optimise artefact period estimate."""
         random_state = np.random.RandomState(self._random_seed)
 
-        stim_period = np.nan
+        estimated_period = deepcopy(self._assumed_periods)
 
         opt_sample_lens = np.unique(
             [
@@ -296,100 +294,25 @@ class PARRM:
             )
             bandwidth = np.min((bandwidth, indices.shape[0] // 4))
 
-            periods = []
-            for assumed_period in self._assumed_periods:
-                periods.extend(
-                    np.concatenate(
-                        (
-                            assumed_period
-                            * (
-                                1
-                                + np.arange(-1e-2, 1e-2 + 1e-4, 1e-4) / run_idx
-                            ),
-                            assumed_period
-                            * (
-                                1
-                                + np.arange(-1e-3, 1e-3 + 1e-5, 1e-5) / run_idx
-                            ),
-                        )
-                    )
-                )
-            periods = np.unique(periods)
-
-            optimise_local_args = [
-                {
-                    "period": period,
-                    "data": self._standard_data,
-                    "indices": indices,
-                    "bandwidth": bandwidth,
-                    "lambda_": lambda_,
-                }
-                for period in periods
-            ]
-            v = np.array(
-                pqdm(
-                    optimise_local_args,
-                    self._optimise_local,
-                    self._n_jobs,
-                    argument_type="kwargs",
-                    desc="Optimising period estimates",
-                    disable=not self._verbose,
-                )
+            periods = self._get_possible_periods(estimated_period, run_idx)
+            periods, fit_errors = self._optimise_period_estimate_first_run(
+                periods, indices, bandwidth, lambda_
             )
-
-            v_idcs = v.argsort()
-            v = v[v_idcs]
-            periods = periods[v_idcs[v != np.inf]]  # ignore invalid `v`s
-            if periods.shape == (0,):  # if no valid periods
-                raise ValueError(
-                    "The period cannot be estimated from the data. Check "
-                    "that your data does not contain NaNs."
-                )
-
-            n_iters = np.min((5, periods.shape[0]))
-            fmin_args = [
-                {
-                    "func": self._optimise_local,
-                    "x0": period,
-                    "args": (self._standard_data, indices, bandwidth, lambda_),
-                    "full_output": True,
-                    "disp": False,
-                }
-                for period in periods[:n_iters]
-            ]
-            output = pqdm(
-                fmin_args,
-                fmin,
-                self._n_jobs,
-                argument_type="kwargs",
-                desc="Optimising period estimates",
-                disable=not self._verbose,
+            estimated_period = self._optimise_period_estimate_second_run(
+                periods, fit_errors, indices, bandwidth, lambda_
             )
-            for iter_idx in range(n_iters):
-                periods[iter_idx] = output[iter_idx][0]
-                v[iter_idx] = output[iter_idx][1]
-            stim_period = periods[v.argmin()]
 
             run_idx += 1
 
-        if np.isnan(stim_period):
+        if np.isnan(estimated_period[0]):
             raise ValueError(
                 "The period cannot be estimated from the data. Check that "
                 "your data does not contain NaNs."
             )
 
-        # final optimisation run with 0 regularisation for best fit
-        self._period = fmin(
-            self._optimise_local,
-            stim_period,
-            (
-                self._standard_data,
-                indices,
-                bandwidth,
-                0.0,
-            ),
-            disp=False,
-        )[0]
+        self._period = self._optimise_period_estimate_final_run(
+            estimated_period[0], indices, bandwidths[-1]
+        )
 
     def _get_centre_indices(
         self,
@@ -438,6 +361,192 @@ class PARRM:
             + start_idx
         )
 
+    def _get_possible_periods(
+        self, estimated_period: tuple[float], run: int
+    ) -> np.ndarray:
+        """Get possible periods for optimisation.
+
+        Parameters
+        ----------
+        estimated_period : tuple of float
+            Initial estimates of the period.
+
+        run : int
+            The number of the optimisation run (starting from 1).
+
+        Returns
+        -------
+        possible_periods : numpy.ndarray, shape of (periods)
+            Possible periods that can be optimised.
+        """
+        periods = []
+        for period in estimated_period:
+            periods.extend(
+                period
+                * np.concatenate(
+                    (
+                        (1 + np.arange(-1e-2, 1e-2 + 1e-4, 1e-4) / run),
+                        (1 + np.arange(-1e-3, 1e-3 + 1e-5, 1e-5) / run),
+                    )
+                )
+            )
+        return np.unique(periods)
+
+    def _optimise_period_estimate_first_run(
+        self,
+        periods: np.ndarray,
+        indices: np.ndarray,
+        bandwidth: int,
+        lambda_: float,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Perform initial period estimate optimisation run.
+
+        Parameters
+        ----------
+        periods : numpy.ndarray, shape of (periods)
+            Possible periods of the artefact.
+
+        indices : numpy.ndarray, shape of (samples)
+            Sample indices of the data to use.
+
+        bandwidth : int
+            Number of sinusoidal harmonics to fit against the data.
+
+        lambda_ : float
+            Linear regression regularisation term.
+
+        Returns
+        -------
+        periods : numpy.ndarray, shape of (periods)
+            Periods in ascending order according to the fit error.
+
+        fit_error : numpy.ndarray, shape of (periods)
+            Error of the fit between the data and the sinusoidal harmonics
+            computed from the period.
+        """
+        optimise_local_args = [
+            {
+                "period": period,
+                "data": self._standard_data,
+                "indices": indices,
+                "bandwidth": bandwidth,
+                "lambda_": lambda_,
+            }
+            for period in periods
+        ]
+        fit_error = np.array(
+            pqdm(
+                optimise_local_args,
+                self._optimise_local,
+                self._n_jobs,
+                argument_type="kwargs",
+                desc="Optimising period estimates",
+                disable=not self._verbose,
+            )
+        )
+
+        min_fit_error_idcs = fit_error.argsort()
+        fit_error = fit_error[min_fit_error_idcs]
+        periods = periods[min_fit_error_idcs[fit_error != np.inf]]
+        if periods.shape == (0,):  # if no valid periods
+            raise ValueError(
+                "The period cannot be estimated from the data. Check "
+                "that your data does not contain NaNs."
+            )
+
+        return periods, fit_error
+
+    def _optimise_period_estimate_second_run(
+        self,
+        periods: np.ndarray,
+        fit_errors: np.ndarray,
+        indices: np.ndarray,
+        bandwidth: int,
+        lambda_: float,
+    ) -> tuple[float]:
+        """Perform additional period estimate optimisation run.
+
+        Parameters
+        ----------
+        periods : numpy.ndarray, shape of (periods)
+            Possible periods of the artefact.
+
+        fit_errors : numpy.ndarray, shape of (periods)
+            Fit errors between the sinusoidal harmonics and the data for each
+            period.
+
+        indices : numpy.ndarray, shape of (samples)
+            Sample indices of the data to use.
+
+        bandwidth : int
+            Number of sinusoidal harmonics to fit against the data.
+
+        lambda_ : float
+            Linear regression regularisation term.
+
+        Returns
+        -------
+        period : tuple of float
+            Period estimate corresponding to the smallest fit error.
+        """
+        n_iters = np.min((5, periods.shape[0]))
+        fmin_args = [
+            {
+                "func": self._optimise_local,
+                "x0": period,
+                "args": (self._standard_data, indices, bandwidth, lambda_),
+                "full_output": True,
+                "disp": False,
+            }
+            for period in periods[:n_iters]
+        ]
+        output = pqdm(
+            fmin_args,
+            fmin,
+            self._n_jobs,
+            argument_type="kwargs",
+            desc="Optimising period estimates",
+            disable=not self._verbose,
+        )
+        for iter_idx in range(n_iters):
+            periods[iter_idx] = output[iter_idx][0]
+            fit_errors[iter_idx] = output[iter_idx][1]
+
+        return tuple([periods[fit_errors.argmin()]])
+
+    def _optimise_period_estimate_final_run(
+        self, period: float, indices: np.ndarray, bandwidth: int
+    ) -> float:
+        """Perform final optimisation run with no regularisation.
+
+        Parameters
+        ----------
+        period : float
+            Estimate of the artefact period.
+
+        indices : numpy.ndarray, shape of (samples)
+            Sample indices of the data to use.
+
+        bandwidth : int
+            Number of sinusoidal harmonics to fit against the data.
+
+        Returns
+        -------
+        final_period : float
+            Final, best period estimate.
+        """
+        return fmin(
+            self._optimise_local,
+            period,
+            (
+                self._standard_data,
+                indices,
+                bandwidth,
+                0.0,  # lambda
+            ),
+            disp=False,
+        )[0]
+
     def _optimise_local(
         self,
         period: float,
@@ -446,39 +555,33 @@ class PARRM:
         bandwidth: int,
         lambda_: float,
     ) -> float:
-        """???
+        """Find the fit error of the data and harmonics for a given period.
 
         Parameters
         ----------
         period : float
-            Estimate of the artefact period.
+            Single estimate of the artefact period.
 
         data : numpy.ndarray, shape of (channels, times)
             Data containing artefacts whose period should be estimated.
 
-        indices : numpy.ndarray, shape of (samples)
-            Samples to use to estimate the period in `data`.
-
-        bandwidth: int
-
-
-        lambda_ : float
-            Regularisation parameter.
+        ...
 
         Returns
         -------
-        f : float
-            ???
+        fit_error : float
+            Error of the fit between the data and the sinusoidal harmonics
+            computed from the period, averaged across channels.
 
         Notes
         -----
         ``period`` must be the first input argument for scipy.optimize.fmin to
         work on this function.
         """
-        f = 0.0
+        fit_error = 0.0
 
-        s = np.arange(1, 2 * bandwidth + 2)
-        s = lambda_ * s / s.sum()
+        regu = np.arange(1, 2 * bandwidth + 2)
+        regu = lambda_ * regu / regu.sum()
 
         for data_chan in data:
             residuals, beta = self._fit_waves_to_data(
@@ -487,44 +590,38 @@ class PARRM:
             if isinstance(residuals, float):
                 return np.inf
 
-            f += residuals.mean() + s @ beta
+            fit_error += residuals.mean() + regu @ beta
 
-        return f / self._n_chans
+        return fit_error / self._n_chans
 
     def _fit_waves_to_data(
         self,
         data: np.ndarray,
         indices: np.ndarray,
         period: float,
-        n_waves: int,
+        bandwidth: int,
     ) -> tuple[np.ndarray, np.ndarray] | tuple[float, float]:
         """Fit sine and cosine waves to the data.
 
         Parameters
         ----------
-        data : numpy.ndarray
-
-        indices : numpy.ndarray
-
-        period : float
-
-        n_wave : int
-            Number of sine and cosine waves to combine with `data`.
+        ...
 
         Returns
         -------
-        residuals : numpy.ndarray
-            ??
+        residuals : numpy.ndarray, shape of (samples)
+            Squared residuals of the fit between between the data and the
+            sinusoidal harmonics. A np.inf value is returned if the matrices
+            are singular.
 
-        beta : numpy.ndarray
-            ??
-
-        error : numpy.linalg.LinAlgError
-            Returned if the wave-data combination is singular.
+        beta : numpy.ndarray, shape of (2 * `bandwidth` + 1, samples)
+            Squared beta coefficient of the linear regression between the data
+            and the sinusoidal harmonics. An np.inf value is returned if the
+            matrices are singular.
         """
         angles = (indices + 1) * (2 * np.pi / period)
-        waves = np.ones((data.shape[0], 2 * n_waves + 1))
-        for wave_idx in range(1, n_waves + 1):
+        waves = np.ones((data.shape[0], 2 * bandwidth + 1))
+        for wave_idx in range(1, bandwidth + 1):
             waves[:, 2 * wave_idx - 1] = np.sin(wave_idx * angles)
             waves[:, 2 * wave_idx] = np.cos(wave_idx * angles)
 
