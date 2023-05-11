@@ -827,11 +827,16 @@ class PARRM:
 
         self._filter = filter_
 
-    def filter_data(self) -> np.ndarray:
+    def filter_data(self, data: np.ndarray | None = None) -> np.ndarray:
         """Apply the PARRM filter to the data and return it.
 
         Can only be called after the filter has been created with
         :meth:`create_filter`.
+
+        Parameters
+        ----------
+        data : numpy.ndarray, shape of (channels, times) | None (default None)
+            The data to filter. If None, :attr:`data` is used.
 
         Returns
         -------
@@ -847,22 +852,36 @@ class PARRM:
                 "method must be called first."
             )
 
+        data = self._check_sort_filter_data_inputs(data)
+
         numerator = (
-            convolve2d(self._data.T, self._filter[:, np.newaxis], "same")
-            - self._data.T
+            convolve2d(data.T, self._filter[:, np.newaxis], "same") - data.T
         )
         denominator = 1 - convolve2d(
-            np.ones_like(self._data).T,
+            np.ones_like(data).T,
             self._filter[:, np.newaxis],
             "same",
         )
 
-        self._filtered_data = (numerator / denominator + self._data.T).T
+        self._filtered_data = (numerator / denominator + data.T).T
 
         if self._verbose:
             print("    ... Data filtered\n")
 
         return self._filtered_data
+
+    def _check_sort_filter_data_inputs(
+        self, data: np.ndarray | None
+    ) -> np.ndarray:
+        """Check and sort `filter_data` inputs."""
+        if data is None:
+            data = self.data
+        if not isinstance(data, np.ndarray):
+            raise TypeError("`data` must be a NumPy array.")
+        if data.ndim != 2:
+            raise ValueError("`data` must be a 2D array.")
+
+        return data
 
     @property
     def data(self) -> np.ndarray:
@@ -885,7 +904,7 @@ class PARRM:
 
     @property
     def filtered_data(self) -> np.ndarray:
-        """Return a copy of the filtered data."""
+        """Return a copy of the most recently filtered data."""
         if self._filtered_data is None:
             raise AttributeError("No data has been filtered yet.")
         return deepcopy(self._filtered_data)
