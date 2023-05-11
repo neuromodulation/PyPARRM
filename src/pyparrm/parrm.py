@@ -346,17 +346,21 @@ class PARRM:
         if self._n_samples * ignore_portion < end_idx - start_idx:
             return np.arange(start_idx, end_idx + 1)
 
-        start_idx = self._search_samples[0] + np.floor(
-            (1.0 - ignore_portion) / 2.0 * self._n_samples
+        start_idx = int(
+            self._search_samples[0]
+            + np.floor((1.0 - ignore_portion) / 2.0 * self._n_samples)
         )
-        end_idx = self._search_samples[1] - np.ceil(
-            (1.0 - ignore_portion) / 2.0 * self._n_samples
+        end_idx = int(
+            self._search_samples[-1]
+            - np.ceil((1.0 - ignore_portion) / 2.0 * self._n_samples)
         )
-        return np.unique(
-            random_state.randint(
-                0,
-                end_idx - start_idx,
-                np.min(use_n_samples, end_idx - start_idx),
+        return (
+            np.unique(
+                random_state.randint(
+                    0,
+                    end_idx - start_idx,
+                    np.min((use_n_samples, end_idx - start_idx)),
+                )
             )
             + start_idx
         )
