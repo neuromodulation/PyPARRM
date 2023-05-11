@@ -253,8 +253,8 @@ class PARRM:
             raise ValueError(
                 "`n_jobs` must be <= the number of available CPUs."
             )
-        if n_jobs < 0 and n_jobs != -1:
-            raise ValueError("If `n_jobs` is < 0, it must be -1.")
+        if n_jobs <= 0 and n_jobs != -1:
+            raise ValueError("If `n_jobs` is <= 0, it must be -1.")
         if n_jobs == -1:
             n_jobs = cpu_count()
         self._n_jobs = deepcopy(n_jobs)
@@ -638,7 +638,7 @@ class PARRM:
         if omit_n_samples < 0 or omit_n_samples >= (self._n_samples - 1) // 2:
             raise ValueError(
                 "`omit_n_samples` must lie in the range [0, (no. of samples - "
-                "1) // 2]."
+                "1) // 2)."
             )
         self._omit_n_samples = deepcopy(omit_n_samples)
 
@@ -646,8 +646,10 @@ class PARRM:
             period_half_width = self._period / 50
         if not isinstance(period_half_width, (int, float)):
             raise TypeError("`period_half_width` must be an int or a float.")
-        if period_half_width > self._period:
-            raise ValueError("`period_half_width` must be <= the period.")
+        if period_half_width <= 0 or period_half_width > self._period:
+            raise ValueError(
+                "`period_half_width` must be lie in the range (0, period]."
+            )
         self._period_half_width = deepcopy(period_half_width)
 
         # Must come after `omit_n_samples` and `period_half_width` set!
@@ -655,11 +657,12 @@ class PARRM:
             filter_half_width = self._get_filter_half_width()
         if not isinstance(filter_half_width, int):
             raise TypeError("`filter_half_width` must be an int.")
-        if filter_half_width <= omit_n_samples:
-            raise ValueError("`filter_half_width` must be > `omit_n_samples`.")
-        if filter_half_width > ((self._n_samples - 1) // 2):
+        if filter_half_width <= omit_n_samples or filter_half_width > (
+            (self._n_samples - 1) // 2
+        ):
             raise ValueError(
-                "`filter_half_width` must be <= ((no. of samples - 1) // 2)"
+                "`filter_half_width` must lie in the range (`omit_n_samples`, "
+                "(no. of samples - 1) // 2]."
             )
         self._filter_half_width = deepcopy(filter_half_width)
 
@@ -763,8 +766,6 @@ class PARRM:
     @property
     def data(self) -> np.ndarray:
         """Return a copy of the data."""
-        if self._data is None:
-            raise AttributeError("No data has been provided yet.")
         return self._data.copy()
 
     @property

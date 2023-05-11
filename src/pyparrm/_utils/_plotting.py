@@ -123,8 +123,8 @@ class _ExploreParams:
             raise ValueError(
                 "`n_jobs` must be <= the number of available CPUs."
             )
-        if n_jobs < 0 and n_jobs != -1:
-            raise ValueError("If `n_jobs` is < 0, it must be -1.")
+        if n_jobs <= 0 and n_jobs != -1:
+            raise ValueError("If `n_jobs` is <= 0, it must be -1.")
         if n_jobs == -1:
             n_jobs = cpu_count()
         self.n_jobs = deepcopy(n_jobs)
