@@ -1,12 +1,12 @@
 [
     {
-        "name": "0.0.1dev",
+        "name": "devel",
         "version": "main",
         "url": "https://pyparrm.readthedocs.io/en/main/"
     },
     {
         "name": "1.0.0",
-        "version": "main",
+        "version": "stable",
         "url": "https://pyparrm.readthedocs.io/en/1.0.0/"
     }
 ]

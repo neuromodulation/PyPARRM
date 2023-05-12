@@ -16,7 +16,7 @@ from pyparrm._utils._docs import linkcode_resolve
 project = "PyPARRM"
 copyright = "2023, Thomas Samuel Binns"
 author = "Thomas Samuel Binns"
-release = "1.0.0"
+release = "development"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
