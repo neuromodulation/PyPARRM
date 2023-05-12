@@ -129,7 +129,7 @@ print(f"Estimated artefact period: {parrm.period:.4f}")
 # can be provided should you wish to filter this instead. The filter itself, as
 # well as a copy of the filtered data, can be accessed from the :attr:`filter
 # <pyparrm.parrm.PARRM.filter>` and :attr:`filtered_data
-# <pyparrm.parrm.PARRM.filtered_data>` attributes, respectfully.
+# <pyparrm.parrm.PARRM.filtered_data>` attributes, respectively.
 
 # %%
 
