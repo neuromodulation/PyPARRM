@@ -6,7 +6,7 @@
     },
     {
         "name": "1.0.0",
-        "version": "stable",
-        "url": "https://pyparrm.readthedocs.io/en/stable/"
+        "version": "1.0.0",
+        "url": "https://pyparrm.readthedocs.io/en/1.0.0/"
     }
 ]
