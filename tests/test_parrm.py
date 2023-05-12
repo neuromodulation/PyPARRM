@@ -39,6 +39,10 @@ def test_parrm(n_chans: int, verbose: bool, n_jobs: int):
     assert filtered_data.shape == data.shape
     assert isinstance(filtered_data, np.ndarray)
 
+    other_data = random.rand(1, 50)
+    other_filtered_data = parrm.filter_data(other_data)
+    assert other_filtered_data.shape == other_data.shape
+
     if n_jobs == -1:
         assert parrm._n_jobs == cpu_count()
 
@@ -171,6 +175,11 @@ def test_parrm_wrong_type_inputs():
         TypeError, match="`period_half_width` must be an int or a float."
     ):
         parrm.create_filter(period_half_width=[0])
+    parrm.create_filter()
+
+    # filter_data
+    with pytest.raises(TypeError, match="`data` must be a NumPy array."):
+        parrm.filter_data(data=data.tolist())
 
 
 def test_parrm_wrong_value_inputs():
@@ -277,6 +286,11 @@ def test_parrm_wrong_value_inputs():
         match="A suitable filter cannot be created with the specified ",
     ):
         parrm.create_filter(omit_n_samples=48)
+    parrm.create_filter()
+
+    # filter_data
+    with pytest.raises(ValueError, match="`data` must be a 2D array."):
+        parrm.filter_data(data=random.rand(100))
 
 
 def test_parrm_premature_method_attribute_calls():
