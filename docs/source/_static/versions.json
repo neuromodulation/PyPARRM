@@ -5,8 +5,8 @@
         "url": "https://pyparrm.readthedocs.io/en/main/"
     },
     {
-        "name": "1.0.0",
-        "version": "stable",
+        "name": "stable",
+        "version": "1.0.0",
         "url": "https://pyparrm.readthedocs.io/en/1.0.0/"
     }
 ]
