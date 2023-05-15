@@ -48,7 +48,7 @@ parrm_ecog.find_period()
 parrm_ecog.explore_filter_params(freq_res=5)
 
 parrm_ecog.create_filter(
-    filter_direction="past",
+    filter_direction="both",
 )
 
 filtered_data_ecog = parrm_ecog.filter_data()
@@ -59,29 +59,22 @@ filtered_data_ecog = parrm_ecog.filter_data()
 # We can then visualize the cleaned signal, and see on different time scales
 # that the correct ECOG artifact representation is removed.  
 
+# %%
 time_ = np.arange(0, data_ecog.shape[1]/sampling_freq, 1/sampling_freq)
 
 plt.figure(figsize=(12,4))
 
-plt.subplot(131)
-plt.plot(time_, data_ecog[0, :], label="Unfiltered")
-plt.plot(time_, filtered_data_ecog[0,:], label="Filtered (PyPARRM)")
+plt.subplot(121)
+plt.plot(time_[sampling_freq*10:], data_ecog[0, sampling_freq*10:], label="Unfiltered")
+plt.plot(time_[sampling_freq*10:], filtered_data_ecog[0,sampling_freq*10:], label="Filtered (PyPARRM)")
 plt.legend()
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude (mV)")
 plt.title("Cortical Filtered Signal")
 
-plt.subplot(132)
-plt.plot(time_[:sampling_freq], data_ecog[0, :sampling_freq], label="Unfiltered")
-plt.plot(time_[:sampling_freq], filtered_data_ecog[0,:sampling_freq], label="Filtered (PyPARRM)")
-plt.legend()
-plt.xlabel("Time (s)")
-plt.ylabel("Amplitude (mV)")
-plt.title("Cortical Filtered Signal")
-
-plt.subplot(133)
-plt.plot(time_[:int(sampling_freq/10)], data_ecog[0, :int(sampling_freq/10)], label="Unfiltered")
-plt.plot(time_[:int(sampling_freq/10)], filtered_data_ecog[0,:int(sampling_freq/10)], label="Filtered (PyPARRM)")
+plt.subplot(122)
+plt.plot(time_[sampling_freq*10:sampling_freq*10+sampling_freq], data_ecog[0,sampling_freq*10:sampling_freq*10+sampling_freq], label="Unfiltered")
+plt.plot(time_[sampling_freq*10:sampling_freq*10+sampling_freq], filtered_data_ecog[0,sampling_freq*10:sampling_freq*10+sampling_freq], label="Filtered (PyPARRM)")
 plt.legend()
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude (mV)")
