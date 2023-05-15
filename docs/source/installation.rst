@@ -1,7 +1,13 @@
 Installation
 ============
 
-Install the package into the desired environment using pip:
+Pyparrm requires at least Python 3.10. To setup a new conda environment, use:
+
+.. code-block:: console
+
+    $ conda create -n pyparrm_env python=3.10 anaconda
+
+Install then the package into the desired environment using pip:
 
 .. code-block:: console
     
