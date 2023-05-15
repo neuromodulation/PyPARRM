@@ -87,6 +87,8 @@ plt.xlabel("Time (s)")
 plt.ylabel("Amplitude (mV)")
 plt.title("Cortical Filtered Signal")
 
+plt.tight_layout()
+
 plt.show()
 
 # %%
