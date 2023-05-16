@@ -1,6 +1,6 @@
 numpy
 scipy
-matplotlib>=3.7.1
+matplotlib
 pqdm
 sphinx
 numpydoc

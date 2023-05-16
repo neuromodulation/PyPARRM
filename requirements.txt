@@ -1,4 +1,4 @@
 numpy
 scipy
-matplotlib>3.7.1
-pqdm
+matplotlib>=3.7.1
+pqdm>=0.2.0

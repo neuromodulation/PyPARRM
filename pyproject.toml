@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyparrm"
-version = "1.0.0"
+version = "1.1.0dev"
 authors = [
     { name="Thomas Samuel Binns", email="t.s.binns@outlook.com" }
 ]
@@ -21,7 +21,7 @@ dependencies = [
     "numpy",
     "scipy",
     "matplotlib >= 3.7.1",
-    "pqdm"
+    "pqdm >= 0.2.0"
 ]
 
 [project.optional-dependencies]

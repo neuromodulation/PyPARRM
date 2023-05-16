@@ -1,6 +1,6 @@
 [
     {
-        "name": "devel",
+        "name": "1.1.0dev",
         "version": "main",
         "url": "https://pyparrm.readthedocs.io/en/main/"
     },
