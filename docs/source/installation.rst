@@ -1,30 +1,22 @@
 Installation
 ============
 
-Pyparrm requires at least Python 3.10. To setup a new conda environment, use:
-
-.. code-block:: console
-
-    $ conda create -n pyparrm_env python=3.10 anaconda
-
-Install then the package into the desired environment using pip:
+To install PyPARRM, activate the desired environment in which you want the
+package, then install it using pip:
 
 .. code-block:: console
     
     $ pip install pyparrm
 
-`See here for the list of requirements <_static/requirements.txt>`_.
+PyPARRM requires Python :math:`\ge` 3.10. Other requirements are listed `here
+<_static/requirements.txt>`_.
 
-Development
------------
-
-To install the package in editable mode for development, clone the `GitHub
-repository <https://github.com/neuromodulation/pyparrm/tree/main>`_ and
-navigate to the desired installation location, then install the package and its
-`development requirements <https://github.com/neuromodulation/pyparrm/tree/main/requirements_dev.txt>`_
-using pip:
+If you need to create an environment in which to install PyPARRM, you can do so
+using `conda <https://docs.conda.io/en/latest/>`_, after which you can install
+the package:
 
 .. code-block:: console
-    
-    $ pip install -e .
-    $ pip install -r requirements_dev.txt
+
+    $ conda create -n pyparrm_env
+    $ conda activate pyparrm_env
+    $ pip install pyparrm
