@@ -1,5 +1,8 @@
 """Tools for plotting results."""
 
+# Author(s):
+#   Thomas Samuel Binns | github.com/tsbinns
+
 from copy import deepcopy
 from multiprocessing import cpu_count
 
@@ -19,7 +22,21 @@ class _ExploreParams:
         PARRM object containing the data for which filter parameters should be
         explored.
 
-    freq_res : int | float (default 1.0)
+    time_range : list of int or float | None (default None)
+        Range of the times to plot and filter in a list of length two,
+        containing the first and last timepoints, respectively. If ``None``,
+        all timepoints are used. Times must lie in the range [0, max. time].
+
+    time_res : int | float (default 0.01)
+        Time resolution, in seconds, to use when plotting the time-series data.
+
+    freq_range : list of int or float | None (default None)
+        Range of the frequencies to plot in a list of length two, containing
+        the first and last frequencies, respectively. If ``None``, all
+        frequencies are used. Frequencies must lie in the range (0, Nyquist
+        frequency].
+
+    freq_res : int | float (default 5.0)
         Frequency resolution, in Hz, to use when computing the power spectra of
         the data.
 
@@ -35,6 +52,9 @@ class _ExploreParams:
     """
 
     parrm = None
+    time_range = None
+    time_res = None
+    freq_range = None
     freq_res = None
     n_jobs = None
 
@@ -64,6 +84,7 @@ class _ExploreParams:
     current_sample_period_yvals = None
     current_sample_period_xvals = None
 
+    valid_filter = True
     filter_error_text = None
 
     times = None
@@ -78,13 +99,27 @@ class _ExploreParams:
     unfiltered_data_line_freq = None
 
     def __init__(
-        self, parrm, freq_res: int | float = 5.0, n_jobs: int = 1
+        self,
+        parrm,
+        time_range: list[int | float] | None = None,
+        time_res: int | float = 0.01,
+        freq_range: list[int | float] | None = None,
+        freq_res: int | float = 5.0,
+        n_jobs: int = 1,
     ) -> None:
-        self._check_sort_init_inputs(parrm, freq_res, n_jobs)
+        self._check_sort_init_inputs(
+            parrm, time_range, time_res, freq_range, freq_res, n_jobs
+        )
         self._initialise_parrm_data_info()
 
     def _check_sort_init_inputs(
-        self, parrm, freq_res: float, n_jobs: int
+        self,
+        parrm,
+        time_range: list[int | float] | None,
+        time_res: int | float,
+        freq_range: list[int | float] | None,
+        freq_res: int | float,
+        n_jobs: int,
     ) -> None:
         """Check and sort init. inputs."""
         assert parrm._period is not None, (
@@ -94,11 +129,79 @@ class _ExploreParams:
         )
         self.parrm = deepcopy(parrm)
         self.parrm._verbose = False
+
+        # time_range
+        if time_range is None:
+            time_range = [0, self.parrm._n_samples / self.parrm._sampling_freq]
+        if not isinstance(time_range, list) or not all(
+            isinstance(entry, (int, float)) for entry in time_range
+        ):
+            raise TypeError("`time_range` must be a list of ints or floats.")
+        if len(time_range) != 2:
+            raise ValueError("`time_range` must have a length of 2.")
+        if time_range[0] < 0 or time_range[1] > self.parrm._n_samples:
+            raise ValueError(
+                "Entries of `time_range` must lie in the range [0, " "max. time]."
+            )
+        if time_range[0] >= time_range[1]:
+            raise ValueError("`time_range[1]` must be > `time_range[0]`.")
+        self.time_range = np.arange(
+            time_range[0] * self.parrm._sampling_freq,
+            time_range[1] * self.parrm._sampling_freq,
+        ).astype(int)
+        self.parrm._data = self.parrm._data[:, self.time_range]
+        self.parrm._n_samples = self.parrm._data.shape[1]
+
+        # time_res
+        if not isinstance(time_res, (int, float)):
+            raise TypeError("`time_res` must be an int or a float.")
+        if time_res <= 0 or time_res >= self.time_range[-1] / self.parrm._sampling_freq:
+            raise ValueError("`time_res` must lie in the range (0, max. time).")
+        self.time_res = time_res
+        self.decim = int(self.time_res * self.parrm._sampling_freq)
+
+        # freq_range
+        if freq_range is None:
+            freq_range = [1, self.parrm._sampling_freq / 2]
+        if not isinstance(freq_range, list) or not all(
+            isinstance(entry, (int, float)) for entry in freq_range
+        ):
+            raise TypeError("`freq_range` must be a list of ints or floats.")
+        if len(freq_range) != 2:
+            raise ValueError("`freq_range` must have a length of 2.")
+        if freq_range[0] <= 0 or freq_range[1] > self.parrm._sampling_freq / 2:
+            raise ValueError(
+                "Entries of `freq_range` must lie in the range (0, "
+                "Nyquist frequency]."
+            )
+        if freq_range[0] >= freq_range[1]:
+            raise ValueError("`freq_range[1]` must be > `freq_range[0]`.")
+        self.freq_range = deepcopy(freq_range)
+
+        # freq_res
+        if not isinstance(freq_res, (int, float)):
+            raise TypeError("`freq_res` must be an int or a float.")
+        if freq_res <= 0 or freq_res > self.parrm._sampling_freq / 2:
+            raise ValueError("`freq_res` must lie in the range (0, Nyquist frequency].")
+        self.freq_res = deepcopy(freq_res)
+
+        # n_jobs
+        if not isinstance(n_jobs, int):
+            raise TypeError("`n_jobs` must be an int.")
+        if n_jobs > cpu_count():
+            raise ValueError("`n_jobs` must be <= the number of available CPUs.")
+        if n_jobs <= 0 and n_jobs != -1:
+            raise ValueError("If `n_jobs` is <= 0, it must be -1.")
+        if n_jobs == -1:
+            n_jobs = cpu_count()
+        self.n_jobs = deepcopy(n_jobs)
+
         self.parrm._check_sort_create_filter_inputs(None, 0, "both", None)
         self.current_period_half_width = self.parrm._period_half_width
         self.current_filter_half_width = self.parrm._filter_half_width
         self.current_filter_direction = self.parrm._filter_direction
         self.current_omit_n_samples = self.parrm._omit_n_samples
+
         self.current_sample_period_xvals = np.mod(
             np.arange(self.current_filter_half_width * 2 - 1),
             self.parrm._period,
@@ -108,26 +211,6 @@ class _ExploreParams:
                 self.current_channel_idx, : self.current_filter_half_width * 2
             ]
         )
-
-        if not isinstance(freq_res, (int, float)):
-            raise TypeError("`freq_res` must be an int or a float.")
-        if freq_res <= 0 or freq_res > self.parrm._sampling_freq // 2:
-            raise ValueError(
-                "`freq_res`must be > 0 and <= the Nyquist frequency."
-            )
-        self.freq_res = deepcopy(freq_res)
-
-        if not isinstance(n_jobs, int):
-            raise TypeError("`n_jobs` must be an int.")
-        if n_jobs > cpu_count():
-            raise ValueError(
-                "`n_jobs` must be <= the number of available CPUs."
-            )
-        if n_jobs <= 0 and n_jobs != -1:
-            raise ValueError("If `n_jobs` is <= 0, it must be -1.")
-        if n_jobs == -1:
-            n_jobs = cpu_count()
-        self.n_jobs = deepcopy(n_jobs)
 
     def _initialise_parrm_data_info(self) -> None:
         """Initialise information from PARRM data for plotting."""
@@ -141,19 +224,22 @@ class _ExploreParams:
         )
 
         # filtered data info.
-        self.times = (
-            np.arange(self.parrm._n_samples) / self.parrm._sampling_freq
-        )
+        self.times = (self.time_range / self.parrm._sampling_freq)[:: self.decim]
 
         # freq data info.
-        n_freqs = int((self.parrm._sampling_freq // 2) // self.freq_res)
-        self.freqs = np.abs(
-            np.fft.fftfreq(n_freqs * 2, 1 / self.parrm._sampling_freq)[
-                1 : n_freqs + 1
+        self.fft_n_points = int((self.parrm._sampling_freq // 2) // self.freq_res)
+        freqs = np.abs(
+            np.fft.fftfreq(self.fft_n_points * 2, 1 / self.parrm._sampling_freq)[
+                1 : self.fft_n_points + 1
             ]
         )
+        self.freqs = freqs[np.where(freqs <= self.freq_range[1])]
         self.unfiltered_psds = compute_psd(
-            self.parrm._data, self.parrm._sampling_freq, n_freqs, self.n_jobs
+            data=self.parrm._data,
+            sampling_freq=self.parrm._sampling_freq,
+            n_points=self.fft_n_points,
+            max_freq=self.freq_range[1],
+            n_jobs=self.n_jobs,
         )
 
     def plot(self) -> None:
@@ -186,9 +272,7 @@ class _ExploreParams:
             """Update number of omitted samples according to the slider."""
             self.current_omit_n_samples = n_samples
             if n_samples >= self.current_filter_half_width:
-                self.slider_omit_n_samples.set_val(
-                    self.current_filter_half_width - 1
-                )
+                self.slider_omit_n_samples.set_val(self.current_filter_half_width - 1)
                 return
             self._update_suptitle()
             self._update_filter()
@@ -226,53 +310,39 @@ class _ExploreParams:
         self.figure.set_layout_engine(None)  # stop updates to layout
         plt.ioff()  # no longer needed
 
-        self.figure.canvas.mpl_connect(
-            "key_press_event", self._check_key_event
-        )
+        self.figure.canvas.mpl_connect("key_press_event", self._check_key_event)
 
         # samples in period space focused plot
         self.sample_period_focused_axis = axes["upper left"]
-        self.sample_period_focused_scatter = (
-            self.sample_period_focused_axis.scatter(
-                self.current_sample_period_xvals,
-                self.current_sample_period_yvals,
-                marker="o",
-                edgecolors="#1f77b4",
-                facecolors="none",
-            )
+        self.sample_period_focused_scatter = self.sample_period_focused_axis.scatter(
+            self.current_sample_period_xvals,
+            self.current_sample_period_yvals,
+            marker="o",
+            edgecolors="#1f77b4",
+            facecolors="none",
         )
-        self.sample_period_focused_axis.set_xlim(
-            (0, self.current_period_half_width)
-        )
+        self.sample_period_focused_axis.set_xlim((0, self.current_period_half_width))
         self._update_sample_period_focused_ylim()
-        self.sample_period_focused_axis.set_xlabel(
-            "Sample-period modulus (A.U.)"
-        )
+        self.sample_period_focused_axis.set_xlabel("Sample-period modulus (A.U.)")
         self.sample_period_focused_axis.set_ylabel("Amplitude (data units)")
 
         # samples in period space overview plot
         self.sample_period_overview_axis = axes["upper inner"]
-        self.sample_period_overview_scatter = (
-            self.sample_period_overview_axis.scatter(
-                self.current_sample_period_xvals,
-                self.current_sample_period_yvals,
-                marker=".",
-                s=1,
-                edgecolors="#1f77b4",
-                alpha=0.5,
-            )
+        self.sample_period_overview_scatter = self.sample_period_overview_axis.scatter(
+            self.current_sample_period_xvals,
+            self.current_sample_period_yvals,
+            marker=".",
+            s=1,
+            edgecolors="#1f77b4",
+            alpha=0.5,
         )
         self.sample_period_overview_axis.set_xlim(
             self.sample_period_overview_axis.get_xlim()
         )
-        self.sample_period_focus_highlight = (
-            self.sample_period_overview_axis.axvspan(
-                0, self.current_period_half_width, color="red", alpha=0.2
-            )
+        self.sample_period_focus_highlight = self.sample_period_overview_axis.axvspan(
+            0, self.current_period_half_width, color="red", alpha=0.2
         )
-        self.sample_period_overview_axis.set_xlabel(
-            "Sample-period modulus (A.U.)"
-        )
+        self.sample_period_overview_axis.set_xlabel("Sample-period modulus (A.U.)")
         self.sample_period_overview_axis.set_ylabel("Amplitude (data units)")
         self.sample_period_overview_axis.set_title(
             r"$\Longleftarrow$ navigate with the arrow keys $\Longrightarrow$"
@@ -283,7 +353,10 @@ class _ExploreParams:
         # timeseries data plot (unfiltered data)
         self.unfiltered_data_line_time = self.time_data_axis.plot(
             self.times,
-            self.parrm._data[self.current_channel_idx],
+            (
+                self.parrm._data[self.current_channel_idx]
+                - np.mean(self.parrm._data[self.current_channel_idx], axis=0)
+            )[:: self.decim],
             color="black",
             alpha=0.3,
             linewidth=0.5,
@@ -293,7 +366,7 @@ class _ExploreParams:
         self.filtered_data_time = self.parrm.filter_data()
         self.filtered_data_line_time = self.time_data_axis.plot(
             self.times,
-            self.filtered_data_time[self.current_channel_idx],
+            self.filtered_data_time[self.current_channel_idx][:: self.decim],
             color="#ff7f0e",
             linewidth=0.5,
         )[0]
@@ -314,7 +387,8 @@ class _ExploreParams:
         self.filtered_data_freq = compute_psd(
             self.filtered_data_time[self.current_channel_idx],
             self.parrm._sampling_freq,
-            self.freqs.shape[0],
+            self.fft_n_points,
+            self.freq_range[1],
         )
         self.filtered_data_line_freq = self.freq_data_axis.loglog(
             self.freqs,
@@ -324,9 +398,7 @@ class _ExploreParams:
         )[0]
         self.freq_data_axis.set_xlabel("Log frequency (Hz)")
         self.freq_data_axis.set_ylabel("Log power (dB/Hz)")
-        self.freq_data_axis.legend(
-            loc="upper left", bbox_to_anchor=(0.7, 1.22)
-        )
+        self.freq_data_axis.legend(loc="upper left", bbox_to_anchor=(0.7, 1.22))
 
     def _initialise_widgets(self) -> None:
         """Initialise widgets to use on the plot."""
@@ -362,9 +434,7 @@ class _ExploreParams:
             valstep=1,
         )
 
-        buttons_filter_direction_axis = self.figure.add_axes(
-            (0.03, 0.05, 0.05, 0.1)
-        )
+        buttons_filter_direction_axis = self.figure.add_axes((0.03, 0.05, 0.05, 0.1))
         buttons_filter_direction_axis.set_title("Filter direction")
         self.buttons_filter_direction = RadioButtons(
             buttons_filter_direction_axis,
@@ -417,26 +487,22 @@ class _ExploreParams:
         )
 
         self.sample_period_focused_scatter.remove()
-        self.sample_period_focused_scatter = (
-            self.sample_period_focused_axis.scatter(
-                self.current_sample_period_xvals,
-                self.current_sample_period_yvals,
-                marker="o",
-                edgecolors="#1f77b4",
-                facecolors="none",
-            )
+        self.sample_period_focused_scatter = self.sample_period_focused_axis.scatter(
+            self.current_sample_period_xvals,
+            self.current_sample_period_yvals,
+            marker="o",
+            edgecolors="#1f77b4",
+            facecolors="none",
         )
 
         self.sample_period_overview_scatter.remove()
-        self.sample_period_overview_scatter = (
-            self.sample_period_overview_axis.scatter(
-                self.current_sample_period_xvals,
-                self.current_sample_period_yvals,
-                marker=".",
-                s=1,
-                edgecolors="#1f77b4",
-                alpha=0.5,
-            )
+        self.sample_period_overview_scatter = self.sample_period_overview_axis.scatter(
+            self.current_sample_period_xvals,
+            self.current_sample_period_yvals,
+            marker=".",
+            s=1,
+            edgecolors="#1f77b4",
+            alpha=0.5,
         )
 
     def _change_channel(self, step: int) -> None:
@@ -455,9 +521,7 @@ class _ExploreParams:
             step = 0 - xlim[0]
         if xlim[1] + step > self.current_sample_period_xvals.max():
             step = self.current_sample_period_xvals.max() - xlim[1]
-        self.sample_period_focused_axis.set_xlim(
-            (xlim[0] + step, xlim[1] + step)
-        )
+        self.sample_period_focused_axis.set_xlim((xlim[0] + step, xlim[1] + step))
 
     def _update_sample_period_focused_xlim_width(self, width: float) -> None:
         """Update width of xlim of sample-period space focused plot."""
@@ -487,10 +551,8 @@ class _ExploreParams:
         """Update shaded area displaying current period window."""
         xlim = self.sample_period_focused_axis.get_xlim()
         self.sample_period_focus_highlight.remove()  # clear old patch
-        self.sample_period_focus_highlight = (
-            self.sample_period_overview_axis.axvspan(
-                xlim[0], xlim[1], color="red", alpha=0.2
-            )
+        self.sample_period_focus_highlight = self.sample_period_overview_axis.axvspan(
+            xlim[0], xlim[1], color="red", alpha=0.2
         )
 
     def _update_suptitle(self) -> None:
@@ -512,9 +574,9 @@ class _ExploreParams:
         self.parrm._omit_n_samples = self.current_omit_n_samples
         self.parrm._filter_direction = self.current_filter_direction
 
-        self.valid_filter = True
         try:
             self.parrm._generate_filter()
+            self.valid_filter = True
         except RuntimeError:
             self.valid_filter = False
 
@@ -529,7 +591,10 @@ class _ExploreParams:
         self.unfiltered_data_line_time.remove()  # clear old line
         self.unfiltered_data_line_time = self.time_data_axis.plot(
             self.times,
-            self.parrm._data[self.current_channel_idx],
+            (
+                self.parrm._data[self.current_channel_idx]
+                - np.mean(self.parrm._data[self.current_channel_idx], axis=0)
+            )[:: self.decim],
             linewidth=0.5,
             color="black",
             alpha=0.3,
@@ -561,7 +626,7 @@ class _ExploreParams:
             # timeseries data
             self.filtered_data_line_time = self.time_data_axis.plot(
                 self.times,
-                self.filtered_data_time[self.current_channel_idx],
+                self.filtered_data_time[self.current_channel_idx][:: self.decim],
                 linewidth=0.5,
                 color="#ff7f0e",
                 label="Filtered data",
@@ -573,7 +638,8 @@ class _ExploreParams:
             self.filtered_data_freq = compute_psd(
                 self.filtered_data_time[self.current_channel_idx],
                 self.parrm._sampling_freq,
-                self.freqs.shape[0],
+                self.fft_n_points,
+                self.freq_range[1],
             )
             self.filtered_data_line_freq = self.freq_data_axis.plot(
                 self.freqs,
@@ -606,16 +672,12 @@ class _ExploreParams:
         """Update ylim of sample-period modulus overview plot."""
         self.sample_period_focus_highlight.remove()  # highlight affects ylim
         self.sample_period_overview_axis.relim()
-        self.sample_period_overview_axis.autoscale_view(
-            scalex=False, scaley=True
-        )
+        self.sample_period_overview_axis.autoscale_view(scalex=False, scaley=True)
         # restore highlight for new ylim
         xlim = self.sample_period_focused_axis.get_xlim()
         ylim = self.sample_period_overview_axis.get_ylim()
-        self.sample_period_focus_highlight = (
-            self.sample_period_overview_axis.axvspan(
-                xlim[0], xlim[1], ylim[0], ylim[1], color="red", alpha=0.2
-            )
+        self.sample_period_focus_highlight = self.sample_period_overview_axis.axvspan(
+            xlim[0], xlim[1], ylim[0], ylim[1], color="red", alpha=0.2
         )
         self._update_sample_period_focus_highlight()
 
