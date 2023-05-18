@@ -22,6 +22,7 @@ original MATLAB implementation of the method
    installation
    examples
    api
+   development
 
 
 Credits

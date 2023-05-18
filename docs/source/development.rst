@@ -1,8 +1,17 @@
 Development
 ===========
 
-If you want to make changes to the package, you may wish to install it in
-editable mode. To do so, first clone the `GitHub repository
+Changelog
+---------
+View the changelog for each PyPARRM version here: `version changelog
+<https://github.com/neuromodulation/pyparrm/tree/main/docs/source/_static/changelog.md>`_
+
+
+Installing PyPARRM in editable mode
+-----------------------------------
+
+If you want to make changes to PyPARRM, you may wish to install it in editable
+mode. To do so, first clone the `GitHub repository
 <https://github.com/neuromodulation/pyparrm/tree/main>`_ to your desired
 location. Once cloned, navigate to this location and install the package
 alongside its `development requirements
@@ -13,6 +22,10 @@ using pip:
     
     $ pip install -e .
     $ pip install -r requirements_dev.txt
+
+
+Contributing to PyPARRM
+-----------------------
 
 If you encounter any issues with the package or wish to suggest improvements,
 please submit a report on the `GitHub issues page
