@@ -36,8 +36,8 @@ from pyparrm import PARRM
 # data, we will start by loading some example data. This is the same example
 # data used in the MATLAB implementation of the method
 # (https://github.com/neuromotion/PARRM), consisting of a single channel
-# with 19,130 timepoints, a sampling frequency of 200 Hz, and containing
-# stimulation artefacts with a frequency of 150 Hz.
+# with 19,130 timepoints (around 100 seconds), a sampling frequency of 200 Hz,
+# and containing stimulation artefacts with a frequency of 150 Hz.
 
 # %%
 
