@@ -1,5 +1,8 @@
 """Tools for plotting results."""
 
+# Author(s):
+#   Thomas Samuel Binns | github.com/tsbinns
+
 from copy import deepcopy
 from multiprocessing import cpu_count
 
@@ -19,7 +22,20 @@ class _ExploreParams:
         PARRM object containing the data for which filter parameters should be
         explored.
 
-    freq_res : int | float (default 1.0)
+    time_range : list of int or float | None (default None)
+        Range of the times to plot and filter in a list of length two,
+        containing the first and last timepoints, respectively, in seconds. If
+        ``None``, all timepoints are used.
+
+    time_res : int | float (default 0.01)
+        Time resolution, in seconds, to use when plotting the time-series data.
+
+    freq_range : list of int or float | None (default None)
+        Range of the frequencies to plot in a list of length two, containing
+        the first and last frequencies, respectively, in Hz. If ``None``, all
+        frequencies are used.
+
+    freq_res : int | float (default 5.0)
         Frequency resolution, in Hz, to use when computing the power spectra of
         the data.
 
@@ -34,10 +50,6 @@ class _ExploreParams:
         Create and show the parameter exploration plot.
     """
 
-    parrm = None
-    freq_res = None
-    n_jobs = None
-
     figure = None
     sample_period_focused_axis = None
     sample_period_overview_axis = None
@@ -50,7 +62,6 @@ class _ExploreParams:
     slider_omit_n_samples = None
     buttons_filter_direction = None
 
-    current_channel_idx = 0
     current_period_half_width = None
     current_filter_half_width = None
     current_omit_n_samples = None
@@ -59,32 +70,43 @@ class _ExploreParams:
     sample_period_focused_scatter = None
     sample_period_overview_scatter = None
 
-    largest_sample_period_xvals = None
-    largest_sample_period_xvals_range = None
     current_sample_period_yvals = None
     current_sample_period_xvals = None
 
+    valid_filter = True
     filter_error_text = None
 
-    times = None
     filtered_data_time = None
     filtered_data_line_time = None
     unfiltered_data_line_time = None
 
-    freqs = None
     filtered_data_freq = None
     filtered_data_line_freq = None
     unfiltered_psds = None
     unfiltered_data_line_freq = None
 
     def __init__(
-        self, parrm, freq_res: int | float = 5.0, n_jobs: int = 1
+        self,
+        parrm,
+        time_range: list[int | float] | None = None,
+        time_res: int | float = 0.01,
+        freq_range: list[int | float] | None = None,
+        freq_res: int | float = 5.0,
+        n_jobs: int = 1,
     ) -> None:
-        self._check_sort_init_inputs(parrm, freq_res, n_jobs)
+        self._check_sort_init_inputs(
+            parrm, time_range, time_res, freq_range, freq_res, n_jobs
+        )
         self._initialise_parrm_data_info()
 
     def _check_sort_init_inputs(
-        self, parrm, freq_res: float, n_jobs: int
+        self,
+        parrm,
+        time_range: list[int | float] | None,
+        time_res: int | float,
+        freq_range: list[int | float] | None,
+        freq_res: int | float,
+        n_jobs: int,
     ) -> None:
         """Check and sort init. inputs."""
         assert parrm._period is not None, (
@@ -94,29 +116,75 @@ class _ExploreParams:
         )
         self.parrm = deepcopy(parrm)
         self.parrm._verbose = False
-        self.parrm._check_sort_create_filter_inputs(None, 0, "both", None)
-        self.current_period_half_width = self.parrm._period_half_width
-        self.current_filter_half_width = self.parrm._filter_half_width
-        self.current_filter_direction = self.parrm._filter_direction
-        self.current_omit_n_samples = self.parrm._omit_n_samples
-        self.current_sample_period_xvals = np.mod(
-            np.arange(self.current_filter_half_width * 2 - 1),
-            self.parrm._period,
-        )
-        self.current_sample_period_yvals = np.diff(
-            self.parrm._data[
-                self.current_channel_idx, : self.current_filter_half_width * 2
-            ]
-        )
 
+        # time_range
+        if time_range is None:
+            time_range = [0, self.parrm._n_samples / self.parrm._sampling_freq]
+        if not isinstance(time_range, list) or not all(
+            isinstance(entry, (int, float)) for entry in time_range
+        ):
+            raise TypeError("`time_range` must be a list of ints or floats.")
+        if len(time_range) != 2:
+            raise ValueError("`time_range` must have a length of 2.")
+        if (
+            time_range[0] < 0
+            or time_range[1]
+            > self.parrm._n_samples / self.parrm._sampling_freq
+        ):
+            raise ValueError(
+                "Entries of `time_range` must lie in the range [0, "
+                "max. time]."
+            )
+        if time_range[0] >= time_range[1]:
+            raise ValueError("`time_range[1]` must be > `time_range[0]`.")
+        self.time_range = np.arange(
+            time_range[0] * self.parrm._sampling_freq,
+            time_range[1] * self.parrm._sampling_freq,
+        ).astype(int)
+        self.parrm._data = self.parrm._data[:, self.time_range]
+        self.parrm._n_samples = self.parrm._data.shape[1]
+
+        # time_res
+        if not isinstance(time_res, (int, float)):
+            raise TypeError("`time_res` must be an int or a float.")
+        if (
+            time_res <= 0
+            or time_res >= self.time_range[-1] / self.parrm._sampling_freq
+        ):
+            raise ValueError(
+                "`time_res` must lie in the range (0, max. time)."
+            )
+        self.time_res = time_res
+        self.decim = int(np.ceil(self.time_res * self.parrm._sampling_freq))
+
+        # freq_range
+        if freq_range is None:
+            freq_range = [1, self.parrm._sampling_freq / 2]
+        if not isinstance(freq_range, list) or not all(
+            isinstance(entry, (int, float)) for entry in freq_range
+        ):
+            raise TypeError("`freq_range` must be a list of ints or floats.")
+        if len(freq_range) != 2:
+            raise ValueError("`freq_range` must have a length of 2.")
+        if freq_range[0] <= 0 or freq_range[1] > self.parrm._sampling_freq / 2:
+            raise ValueError(
+                "Entries of `freq_range` must lie in the range (0, "
+                "Nyquist frequency]."
+            )
+        if freq_range[0] >= freq_range[1]:
+            raise ValueError("`freq_range[1]` must be > `freq_range[0]`.")
+        self.freq_range = deepcopy(freq_range)
+
+        # freq_res
         if not isinstance(freq_res, (int, float)):
             raise TypeError("`freq_res` must be an int or a float.")
-        if freq_res <= 0 or freq_res > self.parrm._sampling_freq // 2:
+        if freq_res <= 0 or freq_res > self.parrm._sampling_freq / 2:
             raise ValueError(
-                "`freq_res`must be > 0 and <= the Nyquist frequency."
+                "`freq_res` must lie in the range (0, Nyquist frequency]."
             )
         self.freq_res = deepcopy(freq_res)
 
+        # n_jobs
         if not isinstance(n_jobs, int):
             raise TypeError("`n_jobs` must be an int.")
         if n_jobs > cpu_count():
@@ -128,6 +196,23 @@ class _ExploreParams:
         if n_jobs == -1:
             n_jobs = cpu_count()
         self.n_jobs = deepcopy(n_jobs)
+
+        self.parrm._check_sort_create_filter_inputs(None, 0, "both", None)
+        self.current_period_half_width = self.parrm._period_half_width
+        self.current_filter_half_width = self.parrm._filter_half_width
+        self.current_filter_direction = self.parrm._filter_direction
+        self.current_omit_n_samples = self.parrm._omit_n_samples
+
+        self.current_sample_period_xvals = np.mod(
+            np.arange(self.current_filter_half_width * 2 - 1),
+            self.parrm._period,
+        )
+        self.current_channel_idx = 0
+        self.current_sample_period_yvals = np.diff(
+            self.parrm._data[
+                self.current_channel_idx, : self.current_filter_half_width * 2
+            ]
+        )
 
     def _initialise_parrm_data_info(self) -> None:
         """Initialise information from PARRM data for plotting."""
@@ -141,19 +226,18 @@ class _ExploreParams:
         )
 
         # filtered data info.
-        self.times = (
-            np.arange(self.parrm._n_samples) / self.parrm._sampling_freq
-        )
+        self.times = (self.time_range / self.parrm._sampling_freq)[
+            :: self.decim
+        ]
 
         # freq data info.
-        n_freqs = int((self.parrm._sampling_freq // 2) // self.freq_res)
-        self.freqs = np.abs(
-            np.fft.fftfreq(n_freqs * 2, 1 / self.parrm._sampling_freq)[
-                1 : n_freqs + 1
-            ]
-        )
-        self.unfiltered_psds = compute_psd(
-            self.parrm._data, self.parrm._sampling_freq, n_freqs, self.n_jobs
+        self.fft_n_points = int(self.parrm._sampling_freq // self.freq_res)
+        self.freqs, self.unfiltered_psds = compute_psd(
+            data=self.parrm._data,
+            sampling_freq=self.parrm._sampling_freq,
+            n_points=self.fft_n_points,
+            max_freq=self.freq_range[1],
+            n_jobs=self.n_jobs,
         )
 
     def plot(self) -> None:
@@ -283,7 +367,10 @@ class _ExploreParams:
         # timeseries data plot (unfiltered data)
         self.unfiltered_data_line_time = self.time_data_axis.plot(
             self.times,
-            self.parrm._data[self.current_channel_idx],
+            (
+                self.parrm._data[self.current_channel_idx]
+                - np.mean(self.parrm._data[self.current_channel_idx], axis=0)
+            )[:: self.decim],
             color="black",
             alpha=0.3,
             linewidth=0.5,
@@ -293,7 +380,7 @@ class _ExploreParams:
         self.filtered_data_time = self.parrm.filter_data()
         self.filtered_data_line_time = self.time_data_axis.plot(
             self.times,
-            self.filtered_data_time[self.current_channel_idx],
+            self.filtered_data_time[self.current_channel_idx][:: self.decim],
             color="#ff7f0e",
             linewidth=0.5,
         )[0]
@@ -311,10 +398,11 @@ class _ExploreParams:
             label="Unfiltered data",
         )[0]
         # frequency data plot (filtered)
-        self.filtered_data_freq = compute_psd(
-            self.filtered_data_time[self.current_channel_idx],
-            self.parrm._sampling_freq,
-            self.freqs.shape[0],
+        _, self.filtered_data_freq = compute_psd(
+            data=self.filtered_data_time[self.current_channel_idx],
+            sampling_freq=self.parrm._sampling_freq,
+            n_points=self.fft_n_points,
+            max_freq=self.freq_range[1],
         )
         self.filtered_data_line_freq = self.freq_data_axis.loglog(
             self.freqs,
@@ -336,11 +424,6 @@ class _ExploreParams:
             valmin=self.largest_sample_period_xvals.min(),
             valmax=self.largest_sample_period_xvals.max() / 2.0,
             valinit=self.current_period_half_width,
-            valstep=(
-                self.largest_sample_period_xvals_range
-                / self.largest_sample_period_xvals.shape[0]
-                * 0.25
-            ),
             valfmt="%0.3f",
         )
 
@@ -512,9 +595,9 @@ class _ExploreParams:
         self.parrm._omit_n_samples = self.current_omit_n_samples
         self.parrm._filter_direction = self.current_filter_direction
 
-        self.valid_filter = True
         try:
             self.parrm._generate_filter()
+            self.valid_filter = True
         except RuntimeError:
             self.valid_filter = False
 
@@ -529,7 +612,10 @@ class _ExploreParams:
         self.unfiltered_data_line_time.remove()  # clear old line
         self.unfiltered_data_line_time = self.time_data_axis.plot(
             self.times,
-            self.parrm._data[self.current_channel_idx],
+            (
+                self.parrm._data[self.current_channel_idx]
+                - np.mean(self.parrm._data[self.current_channel_idx], axis=0)
+            )[:: self.decim],
             linewidth=0.5,
             color="black",
             alpha=0.3,
@@ -561,7 +647,9 @@ class _ExploreParams:
             # timeseries data
             self.filtered_data_line_time = self.time_data_axis.plot(
                 self.times,
-                self.filtered_data_time[self.current_channel_idx],
+                self.filtered_data_time[self.current_channel_idx][
+                    :: self.decim
+                ],
                 linewidth=0.5,
                 color="#ff7f0e",
                 label="Filtered data",
@@ -570,10 +658,11 @@ class _ExploreParams:
             self.time_data_axis.autoscale_view(scalex=False, scaley=True)
 
             # frequency data
-            self.filtered_data_freq = compute_psd(
-                self.filtered_data_time[self.current_channel_idx],
-                self.parrm._sampling_freq,
-                self.freqs.shape[0],
+            _, self.filtered_data_freq = compute_psd(
+                data=self.filtered_data_time[self.current_channel_idx],
+                sampling_freq=self.parrm._sampling_freq,
+                n_points=self.fft_n_points,
+                max_freq=self.freq_range[1],
             )
             self.filtered_data_line_freq = self.freq_data_axis.plot(
                 self.freqs,

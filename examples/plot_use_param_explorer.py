@@ -9,9 +9,8 @@ used to find the best filter settings for your data.
 
 # %%
 
-import numpy as np
-
-from pyparrm import PARRM
+# Author(s):
+#   Thomas Samuel Binns | github.com/tsbinns
 
 ###############################################################################
 # Background
@@ -36,28 +35,17 @@ from pyparrm import PARRM
 #    combined on the timescale of the period.
 #
 # Visualising the effects of these parameters can help greatly for identifying
-# the best settings to use when creating a filter for your data. Here, we will
-# see how this can be done using the interactive parameter explorer of PyPARRM.
-# We start by loading the example data and finding the period of the
-# stimulation artefacts.
-
-# %%
-
-parrm = PARRM(
-    data=np.load("example_data.npy"),
-    sampling_freq=200,
-    artefact_freq=150,
-    verbose=False,
-)
-parrm.find_period()
+# the best settings to use when creating a filter for your data.
 
 ###############################################################################
 # Exploring the filter parameters
 # -------------------------------
-# With an estimate of the artefact period, we can now visualise the effects of
-# the filter parameters to find those that best remove the stimulation
-# artefacts from the data. To do this, we call the :meth:`explore_filter_params
-# <pyparrm.parrm.PARRM.explore_filter_params>` method.
+# Once you have an an estimate of the artefact period (see the following
+# example for a detailed explanation of how to do this: :doc:`plot_use_parrm`),
+# you can now visualise the effects of the filter parameters to find those that
+# best remove the stimulation artefacts from the data. To do this, we call the
+# :meth:`explore_filter_params <pyparrm.parrm.PARRM.explore_filter_params>`
+# method.
 #
 # The explorer consists of four plots, and a set of controls:
 #
@@ -86,20 +74,19 @@ parrm.find_period()
 #   updated in real-time according to changes in the filter settings. The
 #   power spectral density is particularly useful for identifying which filters
 #   reduce the signal's power at the artefact frequency (as well as at the
-#   harmonics and sub-harmonics). If computational cost is a concern, the
-#   frequency resolution of the power spectra can be reduced (5 Hz by default).
+#   harmonics and sub-harmonics).
+#
+# If computational cost is a concern, a limited time range of the data and its
+# resolution can be specified, as well as the frequency range and resolution of
+# the power spectral density.
 #
 # If multiple channels are present in your data, these can be navigated between
 # using the up and down arrow keys. Finally, the title of the explorer gives
 # you an overview of the current filter settings, as well as which channel's
-# data is currently being viewed. Below you find an example of how this method
-# can be called, as well as an image showing the different aspects of the
-# parameter explorer window.
-
-# %%
-
-if False:  # example of method use without actually calling it
-    parrm.explore_filter_params(freq_res=5)
+# data is currently being viewed.
+#
+# The method can be called as ``parrm.explore_filter_params()``. The image
+# below shows the different aspects of the parameter explorer window.
 
 ###############################################################################
 # .. figure:: ../../_static/param_explorer.png

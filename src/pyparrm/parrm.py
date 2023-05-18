@@ -1,12 +1,15 @@
 """Tools for fitting PARRM filters to data."""
 
+# Author(s):
+#   Thomas Samuel Binns | github.com/tsbinns
+
 from copy import deepcopy
 from multiprocessing import cpu_count
 
 import numpy as np
 from pqdm.threads import pqdm
 from scipy.optimize import fmin
-from scipy.signal import convolve2d
+from scipy.signal import convolve
 
 from pyparrm._utils._plotting import _ExploreParams
 
@@ -150,9 +153,8 @@ class PARRM:
 
         n_jobs : int (default 1)
             Number of jobs to run in parallel when optimising the period
-            estimates. Must be less than the number of available CPUs and
-            greater than 0 (unless it is -1, in which case all available CPUs
-            are used).
+            estimates. Must lie in the range [1, number of CPUs] (unless it is
+            -1, in which case all available CPUs are used).
         """  # noqa E501
         if self._verbose:
             print("\nFinding the artefact period...")
@@ -639,7 +641,12 @@ class PARRM:
         return residuals**2, beta**2
 
     def explore_filter_params(
-        self, freq_res: int | float = 5.0, n_jobs: int = 1
+        self,
+        time_range: list[int] | None = None,
+        time_res: int | float = 0.01,
+        freq_range: list[int] | None = None,
+        freq_res: int | float = 5.0,
+        n_jobs: int = 1,
     ) -> None:
         """Create an interactive plot to explore filter parameters.
 
@@ -648,13 +655,27 @@ class PARRM:
 
         Parameters
         ----------
+        time_range : list of int or float | None (default None)
+            Range of the times to plot and filter in a list of length two,
+            containing the first and last timepoints, respectively, in seconds.
+            If ``None``, all timepoints are used.
+
+        time_res : int | float (default 0.01)
+            Time resolution, in seconds, to use when plotting the time-series
+            data.
+
+        freq_range : list of int or float | None (default None)
+            Range of the frequencies to plot in a list of length two,
+            containing the first and last frequencies, respectively, in Hz. If
+            ``None``, all frequencies are used.
+
         freq_res : int | float (default 5.0)
             Frequency resolution, in Hz, to use when computing the power
-            spectra of the data. Must be > 0 and <= the Nyquist frequency.
+            spectra of the data.
 
         n_jobs : int (default 1)
             Number of jobs to run in parallel when computing the power spectra.
-            Must be < the number of available CPUs and > 0 (unless it is -1, in
+            Must lie in the range [1, number of CPUs] (unless it is -1, in
             which case all available CPUs are used).
 
         Notes
@@ -670,7 +691,9 @@ class PARRM:
                 "The period has not yet been estimated. The `find_period` "
                 "method must be called first."
             )
-        param_explorer = _ExploreParams(self, freq_res, n_jobs)
+        param_explorer = _ExploreParams(
+            self, time_range, time_res, freq_range, freq_res, n_jobs
+        )
         param_explorer.plot()
 
     def create_filter(
@@ -855,9 +878,9 @@ class PARRM:
         data = self._check_sort_filter_data_inputs(data)
 
         numerator = (
-            convolve2d(data.T, self._filter[:, np.newaxis], "same") - data.T
+            convolve(data.T, self._filter[:, np.newaxis], "same") - data.T
         )
-        denominator = 1 - convolve2d(
+        denominator = 1 - convolve(
             np.ones_like(data).T,
             self._filter[:, np.newaxis],
             "same",
@@ -875,7 +898,7 @@ class PARRM:
     ) -> np.ndarray:
         """Check and sort `filter_data` inputs."""
         if data is None:
-            data = self.data
+            data = self._data
         if not isinstance(data, np.ndarray):
             raise TypeError("`data` must be a NumPy array.")
         if data.ndim != 2:

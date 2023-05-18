@@ -10,6 +10,9 @@ electrophysiological data in the PyPARRM package.
 
 # %%
 
+# Author(s):
+#   Thomas Samuel Binns | github.com/tsbinns
+
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -33,8 +36,8 @@ from pyparrm import PARRM
 # data, we will start by loading some example data. This is the same example
 # data used in the MATLAB implementation of the method
 # (https://github.com/neuromotion/PARRM), consisting of a single channel
-# with 19,130 timepoints, a sampling frequency of 200 Hz, and containing
-# stimulation artefacts with a frequency of 150 Hz.
+# with 19,130 timepoints (around 100 seconds), a sampling frequency of 200 Hz,
+# and containing stimulation artefacts with a frequency of 150 Hz.
 
 # %%
 
@@ -186,15 +189,15 @@ inset_axis.patch.set_alpha(0.7)
 # power spectral density plot
 from pyparrm._utils._power import compute_psd
 
-n_freqs = sampling_freq // 2
-psd_freqs = np.abs(
-    np.fft.fftfreq(n_freqs * 2, 1 / sampling_freq)[1 : n_freqs + 1]
+n_freqs = sampling_freq / 2
+psd_freqs, psd_raw = compute_psd(
+    data[0, start:end], sampling_freq, int(n_freqs * 2)
 )
-
-psd_raw = compute_psd(data[0, start:end], sampling_freq, n_freqs)
-psd_filtered = compute_psd(filtered_data[0, start:end], sampling_freq, n_freqs)
-psd_artefact_free = compute_psd(
-    artefact_free[0, start:end], sampling_freq, n_freqs
+_, psd_filtered = compute_psd(
+    filtered_data[0, start:end], sampling_freq, int(n_freqs * 2)
+)
+_, psd_artefact_free = compute_psd(
+    artefact_free[0, start:end], sampling_freq, int(n_freqs * 2)
 )
 
 axes[1].loglog(
