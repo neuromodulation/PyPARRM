@@ -85,8 +85,8 @@ used to find the best filter settings for your data.
 # you an overview of the current filter settings, as well as which channel's
 # data is currently being viewed.
 #
-# The method can be called as ``parrm.explore_filter_params()``. Below you find
-# an image showing the different aspects of the parameter explorer window.
+# The method can be called as ``parrm.explore_filter_params()``. The image
+# below shows the different aspects of the parameter explorer window.
 
 ###############################################################################
 # .. figure:: ../../_static/param_explorer.png

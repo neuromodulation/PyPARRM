@@ -4,7 +4,7 @@ Development
 Changelog
 ---------
 View the changelog for each PyPARRM version here: `version changelog
-<https://github.com/neuromodulation/pyparrm/tree/main/docs/source/_static/changelog.md>`_
+<https://neuromodulation.github.io/PyPARRM/changelog>`_
 
 
 Installing PyPARRM in editable mode
@@ -28,7 +28,7 @@ Contributing to PyPARRM
 -----------------------
 
 If you encounter any issues with the package or wish to suggest improvements,
-please submit a report on the `GitHub issues page
+please submit a report on the `issues page
 <https://github.com/neuromodulation/pyparrm/issues>`_.
 
 If you have made any changes which you would like to see officially added to
