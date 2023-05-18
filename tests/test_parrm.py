@@ -1,5 +1,8 @@
 """Tests for features of PyPARRM."""
 
+# Author(s):
+#   Thomas Samuel Binns | github.com/tsbinns
+
 from multiprocessing import cpu_count
 
 import numpy as np
@@ -158,6 +161,26 @@ def test_parrm_wrong_type_inputs():
 
     # explore_filter_params
     with pytest.raises(
+        TypeError, match="`time_range` must be a list of ints or floats."
+    ):
+        parrm.explore_filter_params(time_range=0)
+    with pytest.raises(
+        TypeError, match="`time_range` must be a list of ints or floats."
+    ):
+        parrm.explore_filter_params(time_range=[0, "end"])
+    with pytest.raises(
+        TypeError, match="`time_res` must be an int or a float."
+    ):
+        parrm.explore_filter_params(time_res="all")
+    with pytest.raises(
+        TypeError, match="`freq_range` must be a list of ints or floats."
+    ):
+        parrm.explore_filter_params(freq_range=0)
+    with pytest.raises(
+        TypeError, match="`freq_range` must be a list of ints or floats."
+    ):
+        parrm.explore_filter_params(freq_range=[0, "Nyquist"])
+    with pytest.raises(
         TypeError, match="`freq_res` must be an int or a float."
     ):
         parrm.explore_filter_params(freq_res=[0])
@@ -240,13 +263,47 @@ def test_parrm_wrong_value_inputs():
 
     # explore_filter_params
     with pytest.raises(
-        ValueError, match="`freq_res`must be > 0 and <= the Nyquist frequency."
+        ValueError, match="`time_range` must have a length of 2."
     ):
-        parrm.explore_filter_params(freq_res=0)
+        parrm.explore_filter_params(time_range=[0, 1, 2])
     with pytest.raises(
-        ValueError, match="`freq_res`must be > 0 and <= the Nyquist frequency."
+        ValueError, match="`time_range` must lie in the range "
     ):
-        parrm.explore_filter_params(freq_res=(sampling_freq // 2) + 1)
+        parrm.explore_filter_params(time_range=[-1, 1])
+    with pytest.raises(
+        ValueError, match="`time_range` must lie in the range "
+    ):
+        parrm.explore_filter_params(
+            time_range=[0, (data.shape[1] / sampling_freq) + 1]
+        )
+    with pytest.raises(ValueError, match="`time_range"):
+        parrm.explore_filter_params(time_range=[1, 0])
+    with pytest.raises(ValueError, match="`time_res` must lie in the range "):
+        parrm.explore_filter_params(time_res=0)
+    with pytest.raises(ValueError, match="`time_res` must lie in the range "):
+        parrm.explore_filter_params(time_res=data.shape[1] / sampling_freq)
+    with pytest.raises(
+        ValueError, match="`freq_range` must have a length of 2."
+    ):
+        parrm.explore_filter_params(freq_range=[0, 1, 2])
+    with pytest.raises(
+        ValueError, match="`freq_range` must lie in the range "
+    ):
+        parrm.explore_filter_params(freq_range=[-1, 1])
+    with pytest.raises(
+        ValueError, match="`freq_range` must lie in the range "
+    ):
+        parrm.explore_filter_params(freq_range=[0, (sampling_freq / 2) + 1])
+    with pytest.raises(ValueError, match="`freq_range"):
+        parrm.explore_filter_params(freq_range=[1, 0])
+    with pytest.raises(ValueError, match="`freq_res` must lie in the range "):
+        parrm.explore_filter_params(freq_res=0)
+    with pytest.raises(ValueError, match="`freq_res` must lie in the range "):
+        parrm.explore_filter_params(freq_res=(sampling_freq / 2) + 1)
+    with pytest.raises(
+        ValueError, match="`n_jobs` must be <= the number of available CPUs."
+    ):
+        parrm.explore_filter_params(n_jobs=cpu_count() + 1)
     with pytest.raises(
         ValueError, match="If `n_jobs` is <= 0, it must be -1."
     ):
@@ -358,12 +415,26 @@ def test_compute_psd(n_chans: int, n_jobs: int):
     data = random.rand(n_chans, 100)
 
     n_freqs = 5
-    psd = compute_psd(
+    freqs, psd = compute_psd(
         data=data,
         sampling_freq=sampling_freq,
-        n_freqs=n_freqs,
+        n_points=n_freqs * 2,
         n_jobs=n_jobs,
     )
 
     assert psd.shape == (n_chans, n_freqs)
+    assert freqs.shape[0] == psd.shape[1]
+    assert isinstance(freqs, np.ndarray)
     assert isinstance(psd, np.ndarray)
+
+    max_freq = (sampling_freq / 2) - ((sampling_freq / 2) / n_freqs)
+    freqs, psd = compute_psd(
+        data=data,
+        sampling_freq=sampling_freq,
+        n_points=n_freqs * 2,
+        max_freq=max_freq,
+        n_jobs=n_jobs,
+    )
+
+    assert freqs.shape[0] == psd.shape[1]
+    assert freqs[-1] == max_freq

@@ -657,9 +657,8 @@ class PARRM:
         ----------
         time_range : list of int or float | None (default None)
             Range of the times to plot and filter in a list of length two,
-            containing the first and last timepoints, respectively. If
-            ``None``, all timepoints are used. Times must lie in the range [0,
-            max. time].
+            containing the first and last timepoints, respectively, in seconds.
+            If ``None``, all timepoints are used.
 
         time_res : int | float (default 0.01)
             Time resolution, in seconds, to use when plotting the time-series
@@ -667,9 +666,8 @@ class PARRM:
 
         freq_range : list of int or float | None (default None)
             Range of the frequencies to plot in a list of length two,
-            containing the first and last frequencies, respectively. If
-            ``None``, all frequencies are used. Frequencies must lie in the
-            range (0, Nyquist frequency].
+            containing the first and last frequencies, respectively, in Hz. If
+            ``None``, all frequencies are used.
 
         freq_res : int | float (default 5.0)
             Frequency resolution, in Hz, to use when computing the power

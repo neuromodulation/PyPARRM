@@ -13,7 +13,7 @@ def compute_psd(
     n_points: int,
     max_freq: int | float | None = None,
     n_jobs: int = 1,
-) -> np.ndarray:
+) -> tuple[np.ndarray, np.ndarray]:
     """Compute power spectral density of data.
 
     Parameters
@@ -25,7 +25,8 @@ def compute_psd(
         Sampling frequency, in Hz, of `data`.
 
     n_points : int
-        How many frequencies the power spectra should be computed for.
+        Number of points to use when computing the Fourier coefficients. Should
+        be double the desired number of frequencies in the power spectra.
 
     max_freq : int | float | None (default None)
         The maximum frequency that should be returned. If ``None``, values for
@@ -36,23 +37,34 @@ def compute_psd(
 
     Returns
     -------
+    freqs :numpy.ndarray, shape of (frequencies)
+        Frequencies in `psd`.
+
     psd : numpy.ndarray, shape of (channels, frequencies)
-        Power spectral density of `data`. As `data` is assumed to be
-        real-valued, only positive frequencies are returned. The zero frequency
-        is also discarded.
+        Power spectral density of `data`.
 
     Notes
     -----
     No checks on the inputs are performed for speed.
+
     Data is converted to, and power is returned as, float32 values for speed.
+
+    As `data` is assumed to be real-valued, only positive frequencies are
+    returned. The zero frequency is also discarded.
     """
-    fft_coeffs = fft(data.astype(np.float32), n_points * 2, workers=n_jobs)[
-        ..., 1 : n_points + 1
+    freqs = np.abs(
+        fftfreq(n_points, 1.0 / sampling_freq)[1 : (n_points // 2) + 1]
+    )
+    if max_freq is None:
+        max_freq = freqs[-1]
+    max_freq_i = np.argwhere(freqs <= max_freq)[-1][0]
+
+    fft_coeffs = fft(data.astype(np.float32), n_points, workers=n_jobs)[
+        ..., 1 : (n_points // 2) + 1
     ]
-    psd = (1.0 / (sampling_freq * n_points * 2)) * np.abs(fft_coeffs).astype(
+    psd = (1.0 / (sampling_freq * n_points)) * np.abs(fft_coeffs).astype(
         np.float32
     ) ** 2
     psd[:-1] *= 2
-    freqs = np.abs(fftfreq(n_points * 2, 1.0 / sampling_freq)[1 : n_points + 1])
 
-    return psd[..., np.where(freqs <= max_freq)[0]]
+    return freqs[: max_freq_i + 1], psd[..., : max_freq_i + 1]
