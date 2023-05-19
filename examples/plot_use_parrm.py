@@ -66,7 +66,11 @@ print(
 #
 # The period is found using a grid search, with the goal of minimising the mean
 # squared error between the data and the best fitting sinusoidal harmonics of
-# the period found with linear regression.
+# the period found with linear regression. The process is described in detail
+# in Dastin *et al.* (2021) :footcite:`DastinEtAl2021`, and is also
+# demonstrated in this `video
+# <https://ars.els-cdn.com/content/image/1-s2.0-S2667237521000102-mmc2.mp4>`_
+# from the paper's authors.
 
 # %%
 
