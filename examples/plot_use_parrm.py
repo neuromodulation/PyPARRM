@@ -8,10 +8,10 @@ can be used to identify and remove stimulation artefacts from
 electrophysiological data in the PyPARRM package.
 """
 
-# %%
-
 # Author(s):
 #   Thomas Samuel Binns | github.com/tsbinns
+
+# %%
 
 import numpy as np
 from matplotlib import pyplot as plt

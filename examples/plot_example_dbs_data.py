@@ -9,11 +9,11 @@ the site of deep brain stimulation in the subthalamic nucleus, and from
 electrocorticography (ECoG) at the cortex.
 """
 
-# %%
-
 # Author(s):
 #   Timon Merk          | github.com/timonmerk
 #   Thomas Samuel Binns | github.com/tsbinns
+
+# %%
 
 import numpy as np
 from matplotlib import pyplot as plt
