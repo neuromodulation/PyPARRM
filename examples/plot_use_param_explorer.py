@@ -34,8 +34,12 @@ used to find the best filter settings for your data.
 #    in the waveform of the artefact. This parameter controls which samples are
 #    combined on the timescale of the period.
 #
-# Visualising the effects of these parameters can help greatly for identifying
-# the best settings to use when creating a filter for your data.
+# These parameters are described in detail in Dastin *et al.* (2021)
+# :footcite:`DastinEtAl2021` and the supplementary `video
+# <https://ars.els-cdn.com/content/image/1-s2.0-S2667237521000102-mmc2.mp4>`_
+# from the paper's authors. Crucially, visualising the effects of these
+# parameters can help greatly for identifying the best settings to use when
+# creating a filter for your data.
 
 ###############################################################################
 # Exploring the filter parameters
@@ -49,13 +53,14 @@ used to find the best filter settings for your data.
 #
 # The explorer consists of four plots, and a set of controls:
 #
-# * The sliders and buttons in the bottom left of the explorer allow you to
+# * The textboxes and buttons in the bottom left of the explorer allow you to
 #   manipulate the filter settings. The default settings of the explorer
 #   reflect the settings that would be used when computing the filter if you
 #   did not specify any inputs. You can change: the period half-width
 #   (``period_half_width``); the filter half-width (``filter_half_width``);
 #   the number of omitted samples (``omit_n_samples``); and the filter
-#   direction (``filter_direction``).
+#   direction (``filter_direction``). The ranges of possible values that can be
+#   entered in the textboxes are shown in brackets.
 #
 # * The top left plot shows the data samples in the period space according to
 #   the current period half-width. Just below this is an overview plot of all
@@ -74,16 +79,16 @@ used to find the best filter settings for your data.
 #   updated in real-time according to changes in the filter settings. The
 #   power spectral density is particularly useful for identifying which filters
 #   reduce the signal's power at the artefact frequency (as well as at the
-#   harmonics and sub-harmonics).
+#   harmonics and sub-harmonics). In some cases, the filter settings may not
+#   produce a valid filter, in which case a warning on the time domain plot
+#   will be printed.
 #
 # If computational cost is a concern, a limited time range of the data and its
 # resolution can be specified, as well as the frequency range and resolution of
-# the power spectral density.
-#
-# If multiple channels are present in your data, these can be navigated between
-# using the up and down arrow keys. Finally, the title of the explorer gives
-# you an overview of the current filter settings, as well as which channel's
-# data is currently being viewed.
+# the power spectral density. If multiple channels are present in your data,
+# these can be navigated between using the up and down arrow keys. Finally, the
+# title of the explorer gives you an overview of the current filter settings,
+# as well as which channel's data is currently being viewed.
 #
 # The method can be called as ``parrm.explore_filter_params()``. The image
 # below shows the different aspects of the parameter explorer window.
