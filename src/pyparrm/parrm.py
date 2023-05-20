@@ -9,9 +9,12 @@ from multiprocessing import cpu_count
 import numpy as np
 from pqdm.threads import pqdm
 from scipy.optimize import fmin
-from scipy.signal import convolve
+from scipy.signal import convolve  # faster than convolve2d
 
 from pyparrm._utils._plotting import _ExploreParams
+
+
+np.seterr(all="ignore")  # ignore zero division error
 
 
 class PARRM:
@@ -886,7 +889,12 @@ class PARRM:
             "same",
         )
 
-        self._filtered_data = (numerator / denominator + data.T).T
+        filtered_data = (numerator / denominator + data.T).T
+        # (close-to) zero numerators may be treated as zero in division,
+        # leading to inf/NaN values which can be replaced with 0
+        filtered_data[np.isinf(filtered_data)] = 0
+        filtered_data[np.isnan(filtered_data)] = 0
+        self._filtered_data = filtered_data
 
         if self._verbose:
             print("    ... Data filtered\n")

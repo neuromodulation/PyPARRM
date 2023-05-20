@@ -7,7 +7,7 @@ from copy import deepcopy
 from multiprocessing import cpu_count
 
 from matplotlib import pyplot as plt
-from matplotlib.widgets import RadioButtons, Slider
+from matplotlib.widgets import RadioButtons, TextBox
 import numpy as np
 
 from pyparrm._utils._power import compute_psd
@@ -245,9 +245,14 @@ class _ExploreParams:
         self._initialise_plot()
         self._initialise_widgets()
 
-        def update_period_half_width(half_width: float) -> None:
-            """Update period half width according to the slider."""
+        def update_period_half_width(half_width: str) -> None:
+            """Update period half width according to the textbox."""
+            half_width = float(half_width)
+            half_width = np.max((half_width, self.period_half_width_limits[0]))
+            half_width = np.min((half_width, self.period_half_width_limits[1]))
+            self.textbox_period_half_width.set_val(f"{half_width :.3f}")
             self.current_period_half_width = half_width
+
             self._update_sample_period_focused_xlim_width(half_width)
             self._update_sample_period_focused_ylim()
             self._update_sample_period_focus_highlight()
@@ -255,9 +260,18 @@ class _ExploreParams:
             self._update_filter()
             self.figure.canvas.draw_idle()
 
-        def update_filter_half_width(half_width: int) -> None:
-            """Update filter half width according to the slider."""
+        def update_filter_half_width(half_width: str) -> None:
+            """Update filter half width according to the textbox."""
+            half_width = int(half_width)
+            half_width = int(
+                np.max((half_width, self.filter_half_width_limits[0]))
+            )
+            half_width = int(
+                np.min((half_width, self.filter_half_width_limits[1]))
+            )
+            self.textbox_filter_half_width.set_val(str(half_width))
             self.current_filter_half_width = half_width
+
             if half_width <= self.current_omit_n_samples:
                 self.slider_omit_n_samples.set_val(half_width - 1)
                 return
@@ -266,9 +280,14 @@ class _ExploreParams:
             self._update_filter()
             self.figure.canvas.draw_idle()
 
-        def update_omit_n_samples(n_samples: int) -> None:
-            """Update number of omitted samples according to the slider."""
+        def update_omit_n_samples(n_samples: str) -> None:
+            """Update number of omitted samples according to the textbox."""
+            n_samples = int(n_samples)
+            n_samples = int(np.max((n_samples, self.omit_n_samples_limits[0])))
+            n_samples = int(np.min((n_samples, self.omit_n_samples_limits[1])))
+            self.textbox_omit_n_samples.set_val(str(n_samples))
             self.current_omit_n_samples = n_samples
+
             if n_samples >= self.current_filter_half_width:
                 self.slider_omit_n_samples.set_val(
                     self.current_filter_half_width - 1
@@ -285,9 +304,9 @@ class _ExploreParams:
             self._update_filter()
             self.figure.canvas.draw_idle()
 
-        self.slider_period_half_width.on_changed(update_period_half_width)
-        self.slider_omit_n_samples.on_changed(update_omit_n_samples)
-        self.slider_filter_half_width.on_changed(update_filter_half_width)
+        self.textbox_period_half_width.on_submit(update_period_half_width)
+        self.textbox_omit_n_samples.on_submit(update_omit_n_samples)
+        self.textbox_filter_half_width.on_submit(update_filter_half_width)
         self.buttons_filter_direction.on_clicked(update_filter_direction)
 
         plt.show()
@@ -418,35 +437,49 @@ class _ExploreParams:
 
     def _initialise_widgets(self) -> None:
         """Initialise widgets to use on the plot."""
-        self.slider_period_half_width = Slider(
-            self.figure.add_axes((0.2, 0.12, 0.27, 0.025)),
-            "Period half-width",
-            valmin=self.largest_sample_period_xvals.min(),
-            valmax=self.largest_sample_period_xvals.max() / 2.0,
-            valinit=self.current_period_half_width,
-            valfmt="%0.3f",
+        self.period_half_width_limits = [
+            float(self.largest_sample_period_xvals.min()),
+            self.largest_sample_period_xvals.max() / 2.0,
+        ]
+        if self.largest_sample_period_xvals.min() == 0:
+            period_lower_lim = "0"
+        else:
+            period_lower_lim = f"{self.period_half_width_limits[0] :.3f}"
+
+        self.textbox_period_half_width = TextBox(
+            self.figure.add_axes((0.32, 0.14, 0.15, 0.03)),
+            f"Period half-width [{period_lower_lim} - "
+            f"{self.period_half_width_limits[1] :.3f}]:",
+            f"{self.current_period_half_width :.3f}",
+            textalignment="center",
         )
 
-        self.slider_filter_half_width = Slider(
-            self.figure.add_axes((0.2, 0.08, 0.27, 0.025)),
-            "Filter half-width",
-            valmin=1,
-            valmax=(self.parrm._n_samples - 1) // 2,
-            valinit=self.current_filter_half_width,
-            valstep=1,
+        self.filter_half_width_limits = [
+            1,
+            int((self.parrm._n_samples - 1) / 2),
+        ]
+        self.textbox_filter_half_width = TextBox(
+            self.figure.add_axes((0.32, 0.09, 0.15, 0.03)),
+            f"Filter half-width [{self.filter_half_width_limits[0]} - "
+            f"{self.filter_half_width_limits[1]}]:",
+            str(self.current_filter_half_width),
+            textalignment="center",
         )
 
-        self.slider_omit_n_samples = Slider(
-            self.figure.add_axes((0.2, 0.05, 0.27, 0.025)),
-            "Omitted samples",
-            valmin=0,
-            valmax=((self.parrm._n_samples - 1) // 2) - 1,
-            valinit=self.current_omit_n_samples,
-            valstep=1,
+        self.omit_n_samples_limits = [
+            0,
+            int(((self.parrm._n_samples - 1) / 2) - 1),
+        ]
+        self.textbox_omit_n_samples = TextBox(
+            self.figure.add_axes((0.32, 0.06, 0.15, 0.03)),
+            f"Omitted samples [{self.omit_n_samples_limits[0]} - "
+            f"{self.omit_n_samples_limits[1]}]:",
+            str(self.current_omit_n_samples),
+            textalignment="center",
         )
 
         buttons_filter_direction_axis = self.figure.add_axes(
-            (0.03, 0.05, 0.05, 0.1)
+            (0.07, 0.06, 0.05, 0.1)
         )
         buttons_filter_direction_axis.set_title("Filter direction")
         self.buttons_filter_direction = RadioButtons(
@@ -562,9 +595,10 @@ class _ExploreParams:
         y_vals_max = y_vals.max()
         y_vals_min = y_vals.min()
         y_range = y_vals_max - y_vals_min
-        self.sample_period_focused_axis.set_ylim(
-            (y_vals_min - y_range * 0.2, y_vals_max + y_range * 0.2)
-        )
+        if y_range != 0:  # avoids singular ylim warning
+            self.sample_period_focused_axis.set_ylim(
+                (y_vals_min - y_range * 0.2, y_vals_max + y_range * 0.2)
+            )
 
     def _update_sample_period_focus_highlight(self) -> None:
         """Update shaded area displaying current period window."""
@@ -641,9 +675,10 @@ class _ExploreParams:
             pass
 
         if self.valid_filter:
-            if self.filter_error_text is not None:  # clear old warning text
-                self.time_data_axis.texts[0].remove()
-                self.filter_error_text = None
+            if len(self.time_data_axis.texts) != 0:  # clear warning text
+                for text_i in range(len(self.time_data_axis.texts)):
+                    self.time_data_axis.texts[text_i].remove()
+
             # timeseries data
             self.filtered_data_line_time = self.time_data_axis.plot(
                 self.times,
@@ -672,12 +707,12 @@ class _ExploreParams:
             )[0]
             self.freq_data_axis.relim()
             self.freq_data_axis.autoscale_view(scalex=False, scaley=True)
-        else:
+        elif len(self.time_data_axis.texts) == 0:  # if no warning already
             xlim = self.time_data_axis.get_xlim()
             xlim_mid = xlim[0] + ((xlim[1] - xlim[0]) / 2)
             ylim = self.time_data_axis.get_ylim()
             ylim_mid = ylim[0] + ((ylim[1] - ylim[0]) / 2)
-            self.filter_error_text = self.time_data_axis.text(
+            self.time_data_axis.text(
                 xlim_mid,
                 ylim_mid,
                 "The filter cannot be generated with the current settings",

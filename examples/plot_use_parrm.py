@@ -36,8 +36,8 @@ from pyparrm import PARRM
 # data, we will start by loading some example data. This is the same example
 # data used in the MATLAB implementation of the method
 # (https://github.com/neuromotion/PARRM), consisting of a single channel
-# with 19,130 timepoints (around 100 seconds), a sampling frequency of 200 Hz,
-# and containing stimulation artefacts with a frequency of 150 Hz.
+# with ~100 seconds of data at a sampling frequency of 200 Hz, and containing
+# stimulation artefacts with a frequency of 150 Hz.
 
 # %%
 
@@ -46,7 +46,9 @@ sampling_freq = 200  # Hz
 artefact_freq = 150  # Hz
 
 print(
-    f"`data` has shape: ({data.shape[0]} channel, {data.shape[1]} timepoints)"
+    f"`data` has shape: ({data.shape[0]} channel, "
+    f"{data.shape[1]} timepoints)\n"
+    f"`data` duration: {data.shape[1] / sampling_freq :.2f} seconds"
 )
 
 ###############################################################################
@@ -66,7 +68,11 @@ print(
 #
 # The period is found using a grid search, with the goal of minimising the mean
 # squared error between the data and the best fitting sinusoidal harmonics of
-# the period found with linear regression.
+# the period found with linear regression. The process is described in detail
+# in Dastin *et al.* (2021) :footcite:`DastinEtAl2021`, and is also
+# demonstrated in this `video
+# <https://ars.els-cdn.com/content/image/1-s2.0-S2667237521000102-mmc2.mp4>`_
+# from the paper's authors.
 
 # %%
 
@@ -78,7 +84,7 @@ parrm = PARRM(
 )
 parrm.find_period()
 
-print(f"Estimated artefact period: {parrm.period:.4f}")
+print(f"Estimated artefact period: {parrm.period :.4f}")
 
 ###############################################################################
 # Creating the filter and removing the artefacts

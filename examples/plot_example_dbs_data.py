@@ -97,9 +97,9 @@ parrm.create_filter(period_half_width=0.01, filter_half_width=5000)
 filtered_data = parrm.filter_data()
 
 print(
-    f"Artefact period (ECoG & LFP): {parrm.period:.7f}\n"
-    f"Artefact period (only ECoG):  {parrm_ecog.period:.7f}\n"
-    f"Artefact period (only LFP):   {parrm_lfp.period:.7f}"
+    f"Artefact period (ECoG & LFP): {parrm.period :.7f}\n"
+    f"Artefact period (only ECoG):  {parrm_ecog.period :.7f}\n"
+    f"Artefact period (only LFP):   {parrm_lfp.period :.7f}"
 )
 
 ###############################################################################
