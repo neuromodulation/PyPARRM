@@ -125,6 +125,12 @@ class PARRM:
             raise TypeError("`verbose` must be a bool.")
         self._verbose = deepcopy(verbose)
 
+    def __repr__(self) -> str:  # noqa D107
+        return (
+            f"PARRM object | Data: ({self._n_chans} channels x "
+            f"{self._n_samples} times) | Period: {self._period :.4f}"
+        )
+
     def find_period(
         self,
         search_samples: np.ndarray | None = None,
