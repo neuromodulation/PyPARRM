@@ -55,17 +55,18 @@ artefact_freq = 130  # Hz
 # the subthalamic and cortical signals, we can take advantage of the more
 # efficient approach of estimating the period for all data simultaneously.
 # However, if differences in the period between recording sites are of a
-# particular concern, you can estimate the periods separately. Below, we
+# particular concern, we can also estimate the periods separately. Below, we
 # estimate the periods on: the ECoG and LFP data together; the ECoG data alone;
-# and the LFP data alone. In our case, the estimate of the periods are
-# identical to 5 decimal places.
+# and the LFP data alone. In this case, the estimate of the periods are
+# identical to 5 decimal places. Nevertheless, if you can afford the increased
+# computational cost, you may see improved performance for estimating the
+# period independently for recordings from different sites.
 #
 # Having estimated the period, we proceed to create a filter and apply it to
-# the data. Here, we use a period half-width of 0.01 sample-period modulus, and
-# a filter half-width of 5,000 samples. The following examples give a detailed
-# explanation of the process for finding the artefact period and filtering the
-# data, as well as for finding the optimal filter parameters for your data:
-# :doc:`plot_use_parrm`; :doc:`plot_use_param_explorer`.
+# the data. The following examples give a detailed explanation of the process
+# for finding the artefact period and filtering the data, as well as for
+# finding the optimal filter parameters for your data: :doc:`plot_use_parrm`;
+# :doc:`plot_use_param_explorer`.
 
 # %%
 
@@ -92,9 +93,11 @@ parrm.find_period()
 parrm_ecog.find_period()
 parrm_lfp.find_period()
 
-parrm.create_filter(period_half_width=0.01, filter_half_width=5000)
+parrm_ecog.create_filter(period_half_width=0.02, filter_half_width=5000)
+parrm_lfp.create_filter(period_half_width=0.01, filter_half_width=3000)
 
-filtered_data = parrm.filter_data()
+filtered_ecog = parrm_ecog.filter_data()
+filtered_lfp = parrm_lfp.filter_data()
 
 print(
     f"Artefact period (ECoG & LFP): {parrm.period :.7f}\n"
@@ -137,15 +140,25 @@ n_freqs = sampling_freq / 2
 psd_freqs, psd_unfiltered = compute_psd(
     data_ecog_lfp, sampling_freq, int(n_freqs * 2)
 )
-_, psd_filtered = compute_psd(filtered_data, sampling_freq, int(n_freqs * 2))
+_, psd_filtered_ecog = compute_psd(
+    filtered_ecog, sampling_freq, int(n_freqs * 2)
+)
+_, psd_filtered_lfp = compute_psd(
+    filtered_lfp, sampling_freq, int(n_freqs * 2)
+)
 
 fig = plt.figure(figsize=(12, 8), layout="constrained")
 subfigs = fig.subfigures(2, 1, hspace=0.07)
-for data_idx, data_type in enumerate(["ECoG", "LFP"]):
+data_idx = 0
+for data_name, filtered_data, filtered_psd in zip(
+    ["ECoG", "LFP"],
+    np.concatenate((filtered_ecog, filtered_lfp)),
+    np.concatenate((psd_filtered_ecog, psd_filtered_lfp)),
+):
     axes = subfigs[data_idx].subplots(1, 2)
     inset_axis_time = axes[0].inset_axes((0.15, 0.12, 0.8, 0.4))
     inset_axis_psd = axes[1].inset_axes((0.09, 0.69, 0.6, 0.3))
-    subfigs[data_idx].suptitle(f"{data_type} data")
+    subfigs[data_idx].suptitle(f"{data_name} data")
 
     # timeseries
     axes[0].plot(
@@ -155,10 +168,10 @@ for data_idx, data_type in enumerate(["ECoG", "LFP"]):
         alpha=0.3,
         label="Unfiltered",
     )
-    axes[0].plot(times, filtered_data[data_idx], label="Filtered")
+    axes[0].plot(times, filtered_data, label="Filtered")
     inset_axis_time.plot(
         inset_times,
-        filtered_data[data_idx, inset_start_idx : inset_end_idx + 1],
+        filtered_data[inset_start_idx : inset_end_idx + 1],
         linewidth=0.5,
     )
     axes[0].indicate_inset_zoom(inset_axis_time, edgecolor="black", alpha=0.4)
@@ -175,7 +188,7 @@ for data_idx, data_type in enumerate(["ECoG", "LFP"]):
         alpha=0.3,
         label="Unfiltered",
     )
-    axes[1].loglog(psd_freqs, psd_filtered[data_idx], label="Filtered")
+    axes[1].loglog(psd_freqs, filtered_psd, label="Filtered")
     for harmonic in range(int(psd_freqs[-1] // artefact_freq)):
         inset_axis_psd.axvline(
             (1 + harmonic) * artefact_freq,
@@ -185,13 +198,15 @@ for data_idx, data_type in enumerate(["ECoG", "LFP"]):
         )
     inset_axis_psd.loglog(
         np.arange(120, n_freqs + 1),
-        psd_filtered[data_idx, 119:],
+        filtered_psd[119:],
         linewidth=0.5,
     )
     axes[1].indicate_inset_zoom(inset_axis_psd, edgecolor="black", alpha=0.4)
     axes[1].legend(loc="lower left")
     axes[1].set_xlabel("Log frequency (Hz)")
     axes[1].set_ylabel("Log power (dB/Hz)")
+
+    data_idx += 1
 
 fig.show()
 
