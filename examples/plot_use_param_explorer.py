@@ -7,8 +7,6 @@ This example demonstrates how the PyPARRM interactive parameter explorer can be
 used to find the best filter settings for your data.
 """
 
-# %%
-
 # Author(s):
 #   Thomas Samuel Binns | github.com/tsbinns
 

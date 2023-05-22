@@ -9,11 +9,11 @@ the site of deep brain stimulation in the subthalamic nucleus, and from
 electrocorticography (ECoG) at the cortex.
 """
 
-# %%
-
 # Author(s):
 #   Timon Merk          | github.com/timonmerk
 #   Thomas Samuel Binns | github.com/tsbinns
+
+# %%
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -129,7 +129,9 @@ print(
 # %%
 
 # times to plot
-times = np.arange(data_ecog_lfp.shape[1]) / sampling_freq
+times = np.arange(30, 40.0001, 1 / sampling_freq)
+start_idx = 30 * sampling_freq
+end_idx = 40 * sampling_freq
 inset_times = np.arange(30, 30.5001, 1 / sampling_freq)
 inset_start_idx = 30 * sampling_freq
 inset_end_idx = int(30.5 * sampling_freq)
@@ -157,26 +159,45 @@ for data_name, filtered_data, filtered_psd in zip(
 ):
     axes = subfigs[data_idx].subplots(1, 2)
     inset_axis_time = axes[0].inset_axes((0.15, 0.12, 0.8, 0.4))
-    inset_axis_psd = axes[1].inset_axes((0.09, 0.69, 0.6, 0.3))
     subfigs[data_idx].suptitle(f"{data_name} data")
 
     # timeseries
     axes[0].plot(
         times,
-        data_ecog_lfp[data_idx],
-        color="black",
-        alpha=0.3,
+        data_ecog_lfp[data_idx, start_idx : end_idx + 1],
+        color="#ff7f0e",
+        alpha=0.7,
         label="Unfiltered",
     )
-    axes[0].plot(times, filtered_data, label="Filtered")
+    axes[0].plot(
+        times,
+        filtered_data[start_idx : end_idx + 1],
+        color="#1f77b4",
+        label="Filtered",
+    )
+    inset_axis_time.plot(
+        inset_times,
+        data_ecog_lfp[data_idx, inset_start_idx : inset_end_idx + 1],
+        color="#ff7f0e",
+        alpha=0.7,
+    )
     inset_axis_time.plot(
         inset_times,
         filtered_data[inset_start_idx : inset_end_idx + 1],
-        linewidth=0.5,
+        color="#1f77b4",
     )
+    inset_axis_time.set_xlim(30, 30.5)
+    inset_data = filtered_data[inset_start_idx : inset_end_idx + 1]
+    inset_ylim_pad = (np.max(inset_data) - np.min(inset_data)) * 0.1
+    inset_ylim = np.array(
+        (
+            np.min(inset_data) - inset_ylim_pad,
+            np.max(inset_data) + inset_ylim_pad,
+        )
+    )
+    inset_axis_time.set_ylim(inset_ylim)
     axes[0].indicate_inset_zoom(inset_axis_time, edgecolor="black", alpha=0.4)
-    inset_axis_time.patch.set_alpha(0.7)
-    axes[0].legend(loc="upper right")
+    axes[0].legend(loc="upper right", framealpha=1)
     axes[0].set_xlabel("Time (s)")
     axes[0].set_ylabel("Amplitude (mV)")
 
@@ -184,25 +205,12 @@ for data_name, filtered_data, filtered_psd in zip(
     axes[1].loglog(
         psd_freqs,
         psd_unfiltered[data_idx],
-        color="black",
-        alpha=0.3,
+        color="#ff7f0e",
+        alpha=0.7,
         label="Unfiltered",
     )
-    axes[1].loglog(psd_freqs, filtered_psd, label="Filtered")
-    for harmonic in range(int(psd_freqs[-1] // artefact_freq)):
-        inset_axis_psd.axvline(
-            (1 + harmonic) * artefact_freq,
-            color="black",
-            linestyle="--",
-            alpha=0.3,
-        )
-    inset_axis_psd.loglog(
-        np.arange(120, n_freqs + 1),
-        filtered_psd[119:],
-        linewidth=0.5,
-    )
-    axes[1].indicate_inset_zoom(inset_axis_psd, edgecolor="black", alpha=0.4)
-    axes[1].legend(loc="lower left")
+    axes[1].loglog(psd_freqs, filtered_psd, color="#1f77b4", label="Filtered")
+    axes[1].legend(loc="upper left")
     axes[1].set_xlabel("Log frequency (Hz)")
     axes[1].set_ylabel("Log power (dB/Hz)")
 
