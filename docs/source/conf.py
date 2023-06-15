@@ -35,6 +35,7 @@ extensions = [
     "nbsphinx_link",
     "sphinxcontrib.bibtex",
     "sphinx_gallery.gen_gallery",
+    "versionwarning.extension",
 ]
 
 bibtex_bibfiles = ["refs.bib"]
