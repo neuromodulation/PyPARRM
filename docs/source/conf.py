@@ -81,8 +81,6 @@ for version_name in version_names:
             "version."
         )
 
-versionwarning_project_version = pyparrm.__version__
-versionwarning_project_slug = "sphinx-version-warning"
 versionwarning_messages = warning_messages
 
 # -- Options for HTML output -------------------------------------------------
