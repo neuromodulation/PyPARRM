@@ -9,6 +9,7 @@
 import os
 import sys
 import json
+import urllib
 
 import numpy as np
 
@@ -53,9 +54,10 @@ exclude_patterns = []
 
 
 # -- Version warning ---------------------------------------------------------
-versions = json.load(
+with urllib.request.urlopen(
     "https://pyparrm.readthedocs.io/en/main/_static/versions.json"
-)
+) as versions_url:
+    versions = json.load(versions_url)
 version_names = np.sort([ver["name"] for ver in versions]).tolist()
 warning_messages = {}
 if "dev" in version_names[-1]:
