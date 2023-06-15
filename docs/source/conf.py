@@ -8,6 +8,9 @@
 
 import os
 import sys
+import json
+
+import numpy as np
 
 import pyparrm
 from pyparrm._utils._docs import linkcode_resolve
@@ -48,6 +51,35 @@ sphinx_gallery_conf = {
 templates_path = ["_templates"]
 exclude_patterns = []
 
+
+# -- Version warning ---------------------------------------------------------
+versions = json.load(
+    "https://pyparrm.readthedocs.io/en/main/_static/versions.json"
+)
+version_names = np.sort([ver["name"] for ver in versions]).tolist()
+warning_messages = {}
+if "dev" in version_names[-1]:
+    stable_name = version_names[-2]
+    warning_messages[version_names[-1]] = (
+        "You are not reading the documentation for the stable version of this "
+        f"project. {stable_name} is the stable version."
+    )
+else:
+    stable_name = version_names[-1]
+
+warning_messages = {}
+for version_name in version_names:
+    if (
+        version_name != stable_name
+        and version_name not in warning_messages.keys()
+    ):
+        warning_messages[version_name] = (
+            "You are not reading the documentation for the latest stable "
+            f"version of this project. {version_name} is the latest stable "
+            "version."
+        )
+
+versionwarning_messages = warning_messages
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
