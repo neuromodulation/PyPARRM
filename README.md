@@ -5,7 +5,7 @@ artefacts from electrophysiological data using the Period-based Artefact
 Reconstruction and Removal Method (PARRM) of Dastin-van Rijn *et al.* (2021;
 DOI: [10.1016/j.crmeth.2021.100010](https://doi.org/10.1016/j.crmeth.2021.100010)).
 
-### View the documentation here: [pyparrm.readthedocs.io](https://pyparrm.readthedocs.io/en/main/)
+### View the documentation here: [pyparrm.readthedocs.io](https://pyparrm.readthedocs.io/en/1.1.0/)
 
 
 All credit for PARRM goes to its original authors. PyPARRM is based on the
