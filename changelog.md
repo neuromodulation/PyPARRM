@@ -1,6 +1,8 @@
 # PyPARRM Changelog
 
-## [Version 1.1.0dev](https://pyparrm.readthedocs.io/en/main/index.html)
+## [Version 1.1.1dev](https://pyparrm.readthedocs.io/en/main/index.html)
+
+## [Version 1.1.0](https://pyparrm.readthedocs.io/en/1.1.0/index.html)
 
 ##### Enhancements
 - Improved the speed for filtering data with many samples.

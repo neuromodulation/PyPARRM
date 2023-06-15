@@ -1,8 +1,13 @@
 [
     {
-        "name": "1.1.0dev",
+        "name": "1.1.1dev",
         "version": "main",
         "url": "https://pyparrm.readthedocs.io/en/main/"
+    },
+    {
+        "name": "1.1.0",
+        "version": "1.1.0",
+        "url": "https://pyparrm.readthedocs.io/en/1.1.0/"
     },
     {
         "name": "1.0.0",
