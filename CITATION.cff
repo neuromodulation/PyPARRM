@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Binns"
+  given-names: "Thomas Samuel"
+  orcid: "https://orcid.org/0000-0003-0657-0891"
+title: "PyPARRM"
+version: 1.0.0
+doi: 10.5281/zenodo.8360750
+date-released: 2023-05-23
+url: "https://github.com/neuromodulation/PyPARRM/tree/1.1.0"
