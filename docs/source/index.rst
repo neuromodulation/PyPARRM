@@ -15,6 +15,9 @@ original authors.
 
 Parallel processing is supported to reduce computation times.
 
+If you use this toolbox in your work, please include the following citation:|br|
+Binns, T. S. (2023). PyPARRM (Version 1.0.0). DOI: `10.5281/zenodo.8360750 <https://doi.org/10.5281/zenodo.8360750>`_
+
 .. toctree::
    :maxdepth: 3
    :titlesonly:
@@ -23,3 +26,4 @@ Parallel processing is supported to reduce computation times.
    installation
    examples
    api
+   development
