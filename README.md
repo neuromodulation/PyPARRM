@@ -10,3 +10,6 @@ DOI: [10.1016/j.crmeth.2021.100010](https://doi.org/10.1016/j.crmeth.2021.100010
 
 All credit for PARRM goes to its original authors. PyPARRM is based on the
 original MATLAB implementation of the method ([github.com/neuromotion/PARRM](https://github.com/neuromotion/PARRM)).
+
+If you use this toolbox in your work, please include the following citation:<br/>
+Binns, T. S., & Merk, T. (2023). PyPARRM (Version 1.1.0). DOI: [10.5281/zenodo.8360751](https://doi.org/10.5281/zenodo.8360751)
