@@ -27,20 +27,36 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "coverage",
     "flake8",
     "black",
     "codespell",
-    "pydocstyle",
     "pycodestyle",
+    "pydocstyle",
     "sphinx",
     "numpydoc",
-    "nbsphinx",
-    "nbsphinx_link",
     "sphinxcontrib-bibtex",
     "sphinx-gallery",
-    "pydata-sphinx-theme"
+    "pydata-sphinx-theme",
+    "notebook",
+    "ipykernel",
+    "ipywidgets",
+    "ipython"
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/neuromodulation/PyPARRM"
 "Bug Tracker" = "https://github.com/neuromodulation/PyPARRM/issues"
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "__init__.py",
+    "src/pyparrm/utils/_docs.py"
+]
+
+[tool.codespell]
+skip = "./docs/build,./docs/source/auto_examples,./docs/source/refs.bib,./.*"
+
+[tool.pydocstyle]
+match-dir = "^(?!(examples|docs|tests)).*"

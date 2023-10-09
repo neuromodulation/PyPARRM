@@ -8,7 +8,7 @@ package, then install it using pip:
     
     $ pip install pyparrm
 
-PyPARRM requires Python :math:`\ge` 3.10. Other requirements are listed `here
+PyPARRM requires Python >= 3.10. Other requirements are listed `here
 <_static/requirements.txt>`_.
 
 If you need to create an environment in which to install PyPARRM, you can do so

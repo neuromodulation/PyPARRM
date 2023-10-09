@@ -1,5 +1,10 @@
 .. title:: Home
 
+.. define new line for html
+.. |br| raw:: html
+
+   <br />
+
 =======
 PyPARRM
 =======

@@ -18,7 +18,8 @@ electrocorticography (ECoG) at the cortex.
 import numpy as np
 from matplotlib import pyplot as plt
 
-from pyparrm import PARRM
+from pyparrm import get_example_data_paths, PARRM
+from pyparrm._utils._power import compute_psd
 
 ###############################################################################
 # Background
@@ -41,7 +42,7 @@ from pyparrm import PARRM
 
 # %%
 
-data_ecog_lfp = np.load("ecog_lfp_data.npy")
+data_ecog_lfp = np.load(get_example_data_paths("ecog_lfp_data"))
 
 sampling_freq = 1000  # Hz
 artefact_freq = 130  # Hz
@@ -135,8 +136,6 @@ end_idx = 40 * sampling_freq
 inset_times = np.arange(30, 30.5001, 1 / sampling_freq)
 inset_start_idx = 30 * sampling_freq
 inset_end_idx = int(30.5 * sampling_freq)
-
-from pyparrm._utils._power import compute_psd
 
 n_freqs = sampling_freq / 2
 psd_freqs, psd_unfiltered = compute_psd(

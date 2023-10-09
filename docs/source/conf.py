@@ -31,11 +31,11 @@ extensions = [
     "sphinx.ext.linkcode",
     "sphinx.ext.intersphinx",
     "numpydoc",
-    "nbsphinx",
-    "nbsphinx_link",
     "sphinxcontrib.bibtex",
     "sphinx_gallery.gen_gallery",
 ]
+
+source_suffix = [".rst", ".md"]
 
 bibtex_bibfiles = ["refs.bib"]
 
@@ -45,7 +45,7 @@ sphinx_gallery_conf = {
 }
 
 templates_path = ["_templates"]
-exclude_patterns = []
+exclude_patterns = ["_build"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -53,6 +53,10 @@ exclude_patterns = []
 
 html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
+
+html_css_files = [
+    "css/custom.css",
+]
 
 html_theme_options = {
     "icon_links": [

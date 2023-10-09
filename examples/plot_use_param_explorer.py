@@ -92,7 +92,7 @@ used to find the best filter settings for your data.
 # below shows the different aspects of the parameter explorer window.
 
 ###############################################################################
-# .. figure:: ../../_static/param_explorer.png
+# .. figure:: ../_static/param_explorer.png
 #    :alt: parameter explorer window overview
 #
 #    An overview of the parameter explorer window features

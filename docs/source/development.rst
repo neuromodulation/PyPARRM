@@ -14,14 +14,12 @@ If you want to make changes to PyPARRM, you may wish to install it in editable
 mode. To do so, first clone the `GitHub repository
 <https://github.com/neuromodulation/pyparrm/tree/main>`_ to your desired
 location. Once cloned, navigate to this location and install the package
-alongside its `development requirements
-<https://github.com/neuromodulation/pyparrm/tree/main/requirements_dev.txt>`_
-using pip:
+alongside its development requirements using pip:
 
 .. code-block:: console
     
     $ pip install -e .
-    $ pip install -r requirements_dev.txt
+    $ pip install pybispectra[dev]
 
 
 Contributing to PyPARRM
@@ -36,12 +34,12 @@ the package, consider submitting a `pull request
 <https://github.com/neuromodulation/pyparrm/pulls>`_. When submitting a pull
 request, please check that the existing test suite passes, and if you add new
 features, please make sure that these are covered in the unit tests. The tests
-can be run by navigating to the ``/tests`` directory and calling `pytest
-<https://docs.pytest.org/en/7.3.x/>`_:
+can be run by calling `coverage <https://coverage.readthedocs.io/en/>`_ with
+`pytest <https://docs.pytest.org/en/>`_ in the base directory:
 
 .. code-block:: console
     
-    $ pytest test_parrm.py
+    $ coverage run --source=pyparrm -m pytest -v tests && coverage report -m
 
 Please also check that the documentation can be built following any changes,
 which can be done using `Sphinx <https://www.sphinx-doc.org/en/master/>`_ in
@@ -58,6 +56,6 @@ check that there are no egregious errors from the following commands:
 
 .. code-block:: console
     
-    $ pycodestyle
+    $ flake8
     $ pydocstyle
     $ codespell

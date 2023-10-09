@@ -18,7 +18,7 @@ def compute_psd(
 
     Parameters
     ----------
-    data : numpy.ndarray, shape of (channels, times)
+    data : ~numpy.ndarray, shape of [channels, times]
         Data for which power should be computed (assumed to be real-valued).
 
     sampling_freq : int
@@ -29,18 +29,18 @@ def compute_psd(
         be double the desired number of frequencies in the power spectra.
 
     max_freq : int | float | None (default None)
-        The maximum frequency that should be returned. If ``None``, values for
-        all computed frequencies returned.
+        The maximum frequency that should be returned. If :obj:`None`, values
+        for all computed frequencies returned.
 
-    n_jobs : int (default 1)
+    n_jobs : int (default ``1``)
         Number of jobs to run in parallel.
 
     Returns
     -------
-    freqs :numpy.ndarray, shape of (frequencies)
+    freqs : ~numpy.ndarray, shape of [frequencies]
         Frequencies in `psd`.
 
-    psd : numpy.ndarray, shape of (channels, frequencies)
+    psd : ~numpy.ndarray, shape of [channels, frequencies]
         Power spectral density of `data`.
 
     Notes

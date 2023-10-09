@@ -32,7 +32,7 @@ class PARRM:
 
     Parameters
     ----------
-    data : numpy.ndarray, shape of (channels, times)
+    data : ~numpy.ndarray, shape of [channels, times]
         Time-series from which stimulation artefacts should be identified and
         removed.
 
@@ -47,17 +47,34 @@ class PARRM:
 
     Methods
     -------
-    find_period
+    find_period :
         Find the period of the artefacts.
 
-    explore_filter_params
+    explore_filter_params :
         Create an interactive plot to explore filter parameters.
 
-    create_filter
+    create_filter :
         Create the PARRM filter for removing the stimulation artefacts.
 
-    filter_data
+    filter_data :
         Apply the PARRM filter to the data and return it.
+
+    Attributes
+    ----------
+    data : ~numpy.ndarray, shape of [channels, times]
+        The original data.
+
+    period : float
+        The estimated stimulation period.
+
+    filter : ~numpy.ndarray, shape of [times]
+        The PARRM filter.
+
+    filtered_data : ~numpy.ndarray, shape of [channels, times]
+        The most recently filtered data.
+
+    settings : dict
+        The settings used to generate the PARRM filter.
 
     References
     ----------
@@ -143,12 +160,12 @@ class PARRM:
 
         Parameters
         ----------
-        search_samples : numpy.ndarray | None (default None), shape of (times)
+        search_samples : ~numpy.ndarray | None (default None), shape of [times]
             Samples of :attr:`data` to use when finding the artefact period. If
-            ``None``, all samples are used.
+            :obj:`None`, all samples are used.
 
         assumed_periods : int | float | tuple[int or float] | None (default None)
-            Guess(es) of the artefact period. If ``None``, the period is
+            Guess(es) of the artefact period. If :obj:`None`, the period is
             assumed to be ``sampling_freq`` / ``artefact_freq``.
 
         outlier_boundary : int | float (default 3.0)
@@ -347,7 +364,7 @@ class PARRM:
 
         Returns
         -------
-        use_indices : numpy.ndarray, shape of (samples)
+        use_indices : numpy.ndarray, shape of [samples]
             Indices of samples in the centre of the data segment.
         """
         sample_range = self._search_samples[0] + self._search_samples[-1]
@@ -391,7 +408,7 @@ class PARRM:
 
         Returns
         -------
-        possible_periods : numpy.ndarray, shape of (periods)
+        possible_periods : numpy.ndarray, shape of [periods]
             Possible periods that can be optimised.
         """
         periods = []
@@ -418,10 +435,10 @@ class PARRM:
 
         Parameters
         ----------
-        periods : numpy.ndarray, shape of (periods)
+        periods : numpy.ndarray, shape of [periods]
             Possible periods of the artefact.
 
-        indices : numpy.ndarray, shape of (samples)
+        indices : numpy.ndarray, shape of [samples]
             Sample indices of the data to use.
 
         bandwidth : int
@@ -432,10 +449,10 @@ class PARRM:
 
         Returns
         -------
-        periods : numpy.ndarray, shape of (periods)
+        periods : numpy.ndarray, shape of [periods]
             Periods in ascending order according to the fit error.
 
-        fit_error : numpy.ndarray, shape of (periods)
+        fit_error : numpy.ndarray, shape of [periods]
             Error of the fit between the data and the sinusoidal harmonics
             computed from the period.
         """
@@ -483,14 +500,14 @@ class PARRM:
 
         Parameters
         ----------
-        periods : numpy.ndarray, shape of (periods)
+        periods : numpy.ndarray, shape of [periods]
             Possible periods of the artefact.
 
-        fit_errors : numpy.ndarray, shape of (periods)
+        fit_errors : numpy.ndarray, shape of [periods]
             Fit errors between the sinusoidal harmonics and the data for each
             period.
 
-        indices : numpy.ndarray, shape of (samples)
+        indices : numpy.ndarray, shape of [samples]
             Sample indices of the data to use.
 
         bandwidth : int
@@ -539,7 +556,7 @@ class PARRM:
         period : float
             Estimate of the artefact period.
 
-        indices : numpy.ndarray, shape of (samples)
+        indices : numpy.ndarray, shape of [samples]
             Sample indices of the data to use.
 
         bandwidth : int
@@ -577,7 +594,7 @@ class PARRM:
         period : float
             Single estimate of the artefact period.
 
-        data : numpy.ndarray, shape of (channels, times)
+        data : numpy.ndarray, shape of [channels, times]
             Data containing artefacts whose period should be estimated.
 
         ...
@@ -624,12 +641,12 @@ class PARRM:
 
         Returns
         -------
-        residuals : numpy.ndarray, shape of (samples)
+        residuals : numpy.ndarray, shape of [samples]
             Squared residuals of the fit between between the data and the
             sinusoidal harmonics. A np.inf value is returned if the matrices
             are singular.
 
-        beta : numpy.ndarray, shape of (2 * `bandwidth` + 1, samples)
+        beta : numpy.ndarray, shape of [2 * `bandwidth` + 1, samples]
             Squared beta coefficient of the linear regression between the data
             and the sinusoidal harmonics. An np.inf value is returned if the
             matrices are singular.
@@ -667,22 +684,22 @@ class PARRM:
         time_range : list of int or float | None (default None)
             Range of the times to plot and filter in a list of length two,
             containing the first and last timepoints, respectively, in seconds.
-            If ``None``, all timepoints are used.
+            If :obj:`None`, all timepoints are used.
 
-        time_res : int | float (default 0.01)
+        time_res : int | float (default ``0.01``)
             Time resolution, in seconds, to use when plotting the time-series
             data.
 
         freq_range : list of int or float | None (default None)
             Range of the frequencies to plot in a list of length two,
             containing the first and last frequencies, respectively, in Hz. If
-            ``None``, all frequencies are used.
+            :obj:`None`, all frequencies are used.
 
-        freq_res : int | float (default 5.0)
+        freq_res : int | float (default ``5.0``)
             Frequency resolution, in Hz, to use when computing the power
             spectra of the data.
 
-        n_jobs : int (default 1)
+        n_jobs : int (default ``1``)
             Number of jobs to run in parallel when computing the power spectra.
             Must lie in the range [1, number of CPUs] (unless it is -1, in
             which case all available CPUs are used).
@@ -703,7 +720,7 @@ class PARRM:
         param_explorer = _ExploreParams(
             self, time_range, time_res, freq_range, freq_res, n_jobs
         )
-        param_explorer.plot()
+        param_explorer.plot()  # pragma: no cover
 
     def create_filter(
         self,
@@ -720,10 +737,10 @@ class PARRM:
         Parameters
         ----------
         filter_half_width : int | None (default None)
-            Half-width of the filter to create, in samples. If ``None``, a
+            Half-width of the filter to create, in samples. If :obj:`None`, a
             filter half-width will be generated based on ``omit_n_samples``.
 
-        omit_n_samples : int (default 0)
+        omit_n_samples : int (default ``0``)
             Number of samples to omit from the centre of ``filter_half_width``.
 
         filter_direction : str (default "both")
@@ -735,7 +752,7 @@ class PARRM:
         period_half_width : int | float | None (default None)
             Half-width of the window in samples of period space for which
             points at a similar location in the waveform will be averaged. If
-            ``None``, :attr:`period` / 50 is used.
+            :obj:`None`, :attr:`period` / 50 is used.
         """
         if self._verbose:
             print("Creating the filter...")
@@ -867,12 +884,12 @@ class PARRM:
 
         Parameters
         ----------
-        data : numpy.ndarray, shape of (channels, times) | None (default None)
+        data : ~numpy.ndarray, shape of [channels, times] | None (default None)
             The data to filter. If None, :attr:`data` is used.
 
         Returns
         -------
-        filtered_data : numpy.ndarray, shape of (channels, times)
+        filtered_data : ~numpy.ndarray, shape of [channels, times]
             The filtered, artefact-free data.
         """
         if self._verbose:

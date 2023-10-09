@@ -16,7 +16,8 @@ electrophysiological data in the PyPARRM package.
 import numpy as np
 from matplotlib import pyplot as plt
 
-from pyparrm import PARRM
+from pyparrm import get_example_data_paths, PARRM
+from pyparrm._utils._power import compute_psd
 
 ###############################################################################
 # Background
@@ -41,7 +42,7 @@ from pyparrm import PARRM
 
 # %%
 
-data = np.load("example_data.npy")
+data = np.load(get_example_data_paths("example_data"))
 sampling_freq = 200  # Hz
 artefact_freq = 150  # Hz
 
@@ -166,7 +167,7 @@ filtered_data = parrm.filter_data()  # other data to filter can be given here
 # %%
 
 # comparison to true artefact-free data
-artefact_free = np.load("example_data_artefact_free.npy")
+artefact_free = np.load(get_example_data_paths("example_data_artefact_free"))
 start = 598  # same start time as MATLAB example
 end = 1011  # same end time as MATLAB example
 times = np.arange(end - start) / sampling_freq
@@ -193,8 +194,6 @@ axes[0].indicate_inset_zoom(inset_axis, edgecolor="black", alpha=0.4)
 inset_axis.patch.set_alpha(0.7)
 
 # power spectral density plot
-from pyparrm._utils._power import compute_psd
-
 n_freqs = sampling_freq / 2
 psd_freqs, psd_raw = compute_psd(
     data[0, start:end], sampling_freq, int(n_freqs * 2)
@@ -234,7 +233,7 @@ fig.show()
 # %%
 
 # filtered data computed in MATLAB
-matlab_filtered = np.load("matlab_filtered.npy")
+matlab_filtered = np.load(get_example_data_paths("matlab_filtered"))
 
 fig, axis = plt.subplots(1, 1)
 inset_axis = axis.inset_axes((0.12, 0.6, 0.5, 0.35))

@@ -3,12 +3,14 @@
 # Author(s):
 #   Thomas Samuel Binns | github.com/tsbinns
 
+import os
 from multiprocessing import cpu_count
 
 import numpy as np
 import pytest
 
-from pyparrm import PARRM
+from pyparrm import get_example_data_paths, PARRM
+from pyparrm.data import DATASETS
 from pyparrm._utils._power import compute_psd
 
 
@@ -18,11 +20,12 @@ artefact_freq = 10  # Hz
 
 
 @pytest.mark.parametrize("n_chans", [1, 2])
+@pytest.mark.parametrize("n_samples", [100, 300])
 @pytest.mark.parametrize("verbose", [True, False])
 @pytest.mark.parametrize("n_jobs", [1, -1])
-def test_parrm(n_chans: int, verbose: bool, n_jobs: int):
+def test_parrm(n_chans: int, n_samples: int, verbose: bool, n_jobs: int):
     """Test that PARRM can run."""
-    data = random.rand(n_chans, 100)
+    data = random.rand(n_chans, n_samples)
 
     parrm = PARRM(
         data=data,
@@ -45,6 +48,11 @@ def test_parrm(n_chans: int, verbose: bool, n_jobs: int):
     other_data = random.rand(1, 50)
     other_filtered_data = parrm.filter_data(other_data)
     assert other_filtered_data.shape == other_data.shape
+
+    assert repr(parrm) == (
+        f"PARRM object | Data: ({n_chans} channels x {n_samples} times) | "
+        f"Period: {parrm.period :.4f}"
+    )
 
     if n_jobs == -1:
         assert parrm._n_jobs == cpu_count()
@@ -438,3 +446,19 @@ def test_compute_psd(n_chans: int, n_jobs: int):
 
     assert freqs.shape[0] == psd.shape[1]
     assert freqs[-1] == max_freq
+
+
+def test_get_example_data_paths() -> None:
+    """Test `get_example_data_paths`."""
+    # test it works with correct inputs
+    for name, file in DATASETS.items():
+        path = get_example_data_paths(name=name)
+        assert isinstance(path, str), "`path` should be a str."
+        assert path.endswith(
+            file
+        ), "`path` should end with the name of the dataset."
+        assert os.path.exists(path), "`path` should point to an existing file."
+
+    # test it catches incorrect inputs
+    with pytest.raises(ValueError, match="`name` must be one of"):
+        get_example_data_paths(name="not_a_name")
