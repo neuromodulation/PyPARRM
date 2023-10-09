@@ -2,6 +2,12 @@
 
 ## [Version 1.1.1dev](https://pyparrm.readthedocs.io/en/main/index.html)
 
+##### Enhancements
+- Updated test coverage.
+
+##### Documentation
+- Updated the development section & API format.
+
 ## [Version 1.1.0](https://pyparrm.readthedocs.io/en/1.1.0/index.html)
 
 ##### Enhancements
