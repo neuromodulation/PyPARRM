@@ -7,6 +7,7 @@
 
 ##### Documentation
 - Updated the development section & API format.
+<br/><br/>
 
 ## [Version 1.1.0](https://pyparrm.readthedocs.io/en/1.1.0/index.html)
 
