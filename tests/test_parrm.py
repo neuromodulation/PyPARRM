@@ -20,10 +20,17 @@ artefact_freq = 10  # Hz
 
 
 @pytest.mark.parametrize("n_chans", [1, 2])
-@pytest.mark.parametrize("n_samples", [100, 300])
+@pytest.mark.parametrize("n_samples", [100, 300, 25000])
+@pytest.mark.parametrize("search_samples_proportion", [None, 0.5])
 @pytest.mark.parametrize("verbose", [True, False])
 @pytest.mark.parametrize("n_jobs", [1, -1])
-def test_parrm(n_chans: int, n_samples: int, verbose: bool, n_jobs: int):
+def test_parrm(
+    n_chans: int,
+    n_samples: int,
+    search_samples_proportion: float | None,
+    verbose: bool,
+    n_jobs: int,
+) -> None:
     """Test that PARRM can run."""
     data = random.rand(n_chans, n_samples)
 
@@ -33,7 +40,14 @@ def test_parrm(n_chans: int, n_samples: int, verbose: bool, n_jobs: int):
         artefact_freq=artefact_freq,
         verbose=verbose,
     )
+
+    if search_samples_proportion is None:
+        search_samples = None
+    else:
+        search_samples = np.arange(0, n_samples * search_samples_proportion)
+
     parrm.find_period(
+        search_samples=search_samples,
         assumed_periods=sampling_freq / artefact_freq,
         random_seed=44,
         n_jobs=n_jobs,
@@ -58,7 +72,7 @@ def test_parrm(n_chans: int, n_samples: int, verbose: bool, n_jobs: int):
         assert parrm._n_jobs == cpu_count()
 
 
-def test_parrm_attrs():
+def test_parrm_attrs() -> None:
     """Test that attributes returned from PARRM are correct.
 
     The returned attributes should simply be a copy of their private
@@ -100,7 +114,7 @@ def test_parrm_attrs():
     assert settings["filter"]["period_half_width"] == parrm._period_half_width
 
 
-def test_parrm_wrong_type_inputs():
+def test_parrm_wrong_type_inputs() -> None:
     """Test that inputs of wrong types to PARRM are caught."""
     data = random.rand(1, 100)
 
@@ -213,7 +227,7 @@ def test_parrm_wrong_type_inputs():
         parrm.filter_data(data=data.tolist())
 
 
-def test_parrm_wrong_value_inputs():
+def test_parrm_wrong_value_inputs() -> None:
     """Test that inputs of wrong values to PARRM are caught."""
     data = random.rand(1, 100)
 
@@ -358,7 +372,7 @@ def test_parrm_wrong_value_inputs():
         parrm.filter_data(data=random.rand(100))
 
 
-def test_parrm_premature_method_attribute_calls():
+def test_parrm_premature_method_attribute_calls() -> None:
     """Test that errors raised for PARRM methods/attrs. called prematurely."""
     parrm = PARRM(
         data=random.rand(1, 100),
@@ -401,7 +415,7 @@ def test_parrm_premature_method_attribute_calls():
         parrm.filter_data()
 
 
-def test_parrm_missing_filter_inputs():
+def test_parrm_missing_filter_inputs() -> None:
     """Test that PARRM can compute values for missing filter inputs."""
     parrm = PARRM(
         data=random.rand(1, 100),
@@ -418,7 +432,7 @@ def test_parrm_missing_filter_inputs():
 
 @pytest.mark.parametrize("n_chans", [1, 2])
 @pytest.mark.parametrize("n_jobs", [1, 2])
-def test_compute_psd(n_chans: int, n_jobs: int):
+def test_compute_psd(n_chans: int, n_jobs: int) -> None:
     """Test that PSD computation runs."""
     data = random.rand(n_chans, 100)
 

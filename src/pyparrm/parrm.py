@@ -332,10 +332,10 @@ class PARRM:
 
             run_idx += 1
 
-        if np.isnan(estimated_period[0]):
+        if np.isfinite(estimated_period[0]):
             raise ValueError(
                 "The period cannot be estimated from the data. Check that "
-                "your data does not contain NaNs."
+                "your data does not contain NaNs of infs."
             )
 
         self._period = self._optimise_period_estimate_final_run(
@@ -483,7 +483,7 @@ class PARRM:
         if periods.shape == (0,):  # if no valid periods
             raise ValueError(
                 "The period cannot be estimated from the data. Check "
-                "that your data does not contain NaNs."
+                "that your data does not contain NaNs of infs."
             )
 
         return periods, fit_error
