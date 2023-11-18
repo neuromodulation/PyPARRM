@@ -541,7 +541,7 @@ class PARRM:
             disable=not self._verbose,
         )
         for iter_idx in range(n_iters):
-            periods[iter_idx] = output[iter_idx][0]
+            periods[iter_idx] = output[iter_idx][0][0]
             fit_errors[iter_idx] = output[iter_idx][1]
 
         return tuple([periods[fit_errors.argmin()]])
