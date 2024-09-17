@@ -1,0 +1,9 @@
+name: pyparrm
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10
+  - numpy
+  - scipy
+  - matplotlib >= 3.7.1
+  - pqdm >= 0.2.0
