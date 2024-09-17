@@ -13,8 +13,6 @@ from pyparrm import get_example_data_paths, PARRM
 from pyparrm.data import DATASETS
 from pyparrm._utils._power import compute_psd
 
-
-random = np.random.RandomState(44)
 sampling_freq = 20  # Hz
 artefact_freq = 10  # Hz
 
@@ -32,7 +30,8 @@ def test_parrm(
     n_jobs: int,
 ) -> None:
     """Test that PARRM can run."""
-    data = random.rand(n_chans, n_samples)
+    random = np.random.default_rng(44)
+    data = random.standard_normal((n_chans, n_samples))
 
     parrm = PARRM(
         data=data,
@@ -56,7 +55,7 @@ def test_parrm(
     assert filtered_data.shape == data.shape
     assert isinstance(filtered_data, np.ndarray)
 
-    other_data = random.rand(1, 50)
+    other_data = random.standard_normal((1, 50))
     other_filtered_data = parrm.filter_data(other_data)
     assert other_filtered_data.shape == other_data.shape
 
@@ -75,7 +74,8 @@ def test_parrm_attrs() -> None:
     The returned attributes should simply be a copy of their private
     counterparts.
     """
-    data = random.rand(1, 100)
+    random = np.random.default_rng(44)
+    data = random.standard_normal((1, 100))
 
     parrm = PARRM(
         data=data,
@@ -111,7 +111,8 @@ def test_parrm_attrs() -> None:
 
 def test_parrm_wrong_type_inputs() -> None:
     """Test that inputs of wrong types to PARRM are caught."""
-    data = random.rand(1, 100)
+    random = np.random.default_rng(44)
+    data = random.standard_normal((1, 100))
 
     # init object
     with pytest.raises(TypeError, match="`data` must be a NumPy array."):
@@ -198,12 +199,13 @@ def test_parrm_wrong_type_inputs() -> None:
 
 def test_parrm_wrong_value_inputs() -> None:
     """Test that inputs of wrong values to PARRM are caught."""
-    data = random.rand(1, 100)
+    random = np.random.default_rng(44)
+    data = random.standard_normal((1, 100))
 
     # init object
     with pytest.raises(ValueError, match="`data` must be a 2D array."):
         PARRM(
-            data=random.rand(1, 1, 1),
+            data=random.standard_normal((1, 1, 1)),
             sampling_freq=sampling_freq,
             artefact_freq=artefact_freq,
         )
@@ -294,13 +296,14 @@ def test_parrm_wrong_value_inputs() -> None:
 
     # filter_data
     with pytest.raises(ValueError, match="`data` must be a 2D array."):
-        parrm.filter_data(data=random.rand(100))
+        parrm.filter_data(data=random.standard_normal((100,)))
 
 
 def test_parrm_premature_method_attribute_calls() -> None:
     """Test that errors raised for PARRM methods/attrs. called prematurely."""
+    random = np.random.default_rng(44)
     parrm = PARRM(
-        data=random.rand(1, 100),
+        data=random.standard_normal((1, 100)),
         sampling_freq=sampling_freq,
         artefact_freq=artefact_freq,
         verbose=False,
@@ -329,8 +332,9 @@ def test_parrm_premature_method_attribute_calls() -> None:
 
 def test_parrm_missing_filter_inputs() -> None:
     """Test that PARRM can compute values for missing filter inputs."""
+    random = np.random.default_rng(44)
     parrm = PARRM(
-        data=random.rand(1, 100),
+        data=random.standard_normal((1, 100)),
         sampling_freq=sampling_freq,
         artefact_freq=artefact_freq,
         verbose=False,
@@ -346,7 +350,8 @@ def test_parrm_missing_filter_inputs() -> None:
 @pytest.mark.parametrize("n_jobs", [1, 2])
 def test_compute_psd(n_chans: int, n_jobs: int) -> None:
     """Test that PSD computation runs."""
-    data = random.rand(n_chans, 100)
+    random = np.random.default_rng(44)
+    data = random.standard_normal((n_chans, 100))
 
     n_freqs = 5
     freqs, psd = compute_psd(
