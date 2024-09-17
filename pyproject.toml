@@ -1,21 +1,20 @@
 [build-system]
-requires = ["hatchling"]
 build-backend = "hatchling.build"
+requires = ["hatchling"]
 
 [project]
-name = "pyparrm"
-version = "1.2.0dev"
-authors = [{ name = "Thomas Samuel Binns", email = "t.s.binns@outlook.com" }]
-description = "A Python port of the PARRM algorithm"
-readme = "README.md"
-requires-python = ">=3.10"
+authors = [{email = "t.s.binns@outlook.com", name = "Thomas Samuel Binns"}]
 classifiers = [
-  "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
 ]
-
-dependencies = ["numpy", "scipy", "matplotlib >= 3.7.1", "pqdm >= 0.2.0"]
+dependencies = ["matplotlib >= 3.7.1", "numpy", "pqdm >= 0.2.0", "scipy"]
+description = "A Python port of the PARRM algorithm"
+name = "pyparrm"
+readme = "README.md"
+requires-python = ">=3.10"
+version = "1.2.0dev"
 
 [project.optional-dependencies]
 dev = ["pybispectra[doc]", "pybispectra[lint]", "pybispectra[test]"]
@@ -45,8 +44,8 @@ lint = [
 test = ["coverage", "pytest"]
 
 [project.urls]
-"Homepage" = "https://github.com/neuromodulation/PyPARRM"
 "Bug Tracker" = "https://github.com/neuromodulation/PyPARRM/issues"
+"Homepage" = "https://github.com/neuromodulation/PyPARRM"
 
 [tool.codespell]
 ignore-words-list = "trough"
