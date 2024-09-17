@@ -169,15 +169,15 @@ class PARRM:
         outlier_boundary : int | float (default 3.0)
             Boundary (in standard deviation) to consider outlier values in :attr:`data`.
 
-        random_seed: int | None (default None)
+        random_seed : int | None (default None)
             Seed to use when generating indices of samples to search for the period.
             Only used if the number of available samples is less than the number of
             requested samples.
 
         n_jobs : int (default 1)
             Number of jobs to run in parallel when optimising the period estimates. Must
-            lie in the range [1, number of CPUs] (unless it is -1, in which case all
-            available CPUs are used).
+            lie in the range ``[1, number of CPUs]`` (unless it is ``-1``, in which case
+            all available CPUs are used).
         """  # noqa E501
         if self._verbose:
             print("\nFinding the artefact period...")
@@ -652,7 +652,7 @@ class PARRM:
             the first and last timepoints, respectively, in seconds. If :obj:`None`, all
             timepoints are used.
 
-        time_res : int | float (default ``0.01``)
+        time_res : int | float (default 0.01)
             Time resolution, in seconds, to use when plotting the time-series data.
 
         freq_range : list of int or float | None (default None)
@@ -660,13 +660,13 @@ class PARRM:
             first and last frequencies, respectively, in Hz. If :obj:`None`, all
             frequencies are used.
 
-        freq_res : int | float (default ``5.0``)
+        freq_res : int | float (default 5.0)
             Frequency resolution, in Hz, to use when computing the power spectra of the
             data.
 
-        n_jobs : int (default ``1``)
+        n_jobs : int (default 1)
             Number of jobs to run in parallel when computing the power spectra. Must lie
-            in the range [1, number of CPUs] (unless it is -1, in which case all
+            in the range ``[1, number of CPUs]`` (unless it is ``-1``, in which case all
             available CPUs are used).
 
         Notes
@@ -705,14 +705,14 @@ class PARRM:
             Half-width of the filter to create, in samples. If :obj:`None`, a filter
             half-width will be generated based on ``omit_n_samples``.
 
-        omit_n_samples : int (default ``0``)
+        omit_n_samples : int (default 0)
             Number of samples to omit from the centre of ``filter_half_width``.
 
         filter_direction : str (default "both")
             Direction from which samples should be taken to create the filter, relative
-            to the centre of the filter window. Can be: "both" for backward and forward
-            samples; "past" for backward samples only; and "future" for forward samples
-            only.
+            to the centre of the filter window. Can be: ``"both"`` for backward and
+            forward samples; ``"past"`` for backward samples only; and ``"future"`` for
+            forward samples only.
 
         period_half_width : int | float | None (default None)
             Half-width of the window in samples of period space for which points at a
@@ -865,8 +865,8 @@ class PARRM:
         )
 
         filtered_data = (numerator / denominator + data.T).T
-        # (close-to) zero numerators may be treated as zero in division,
-        # leading to inf/NaN values which can be replaced with 0
+        # (close-to) zero numerators may be treated as zero in division, leading to
+        # inf/NaN values which can be replaced with 0
         filtered_data[np.isinf(filtered_data)] = 0
         filtered_data[np.isnan(filtered_data)] = 0
         self._filtered_data = filtered_data
