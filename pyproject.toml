@@ -5,24 +5,17 @@ build-backend = "hatchling.build"
 [project]
 name = "pyparrm"
 version = "1.2.0dev"
-authors = [
-    { name="Thomas Samuel Binns", email="t.s.binns@outlook.com" }
-]
+authors = [{ name = "Thomas Samuel Binns", email = "t.s.binns@outlook.com" }]
 description = "A Python port of the PARRM algorithm"
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent"
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
 ]
 
-dependencies = [
-    "numpy",
-    "scipy",
-    "matplotlib >= 3.7.1",
-    "pqdm >= 0.2.0"
-]
+dependencies = ["numpy", "scipy", "matplotlib >= 3.7.1", "pqdm >= 0.2.0"]
 
 [project.optional-dependencies]
 dev = ["pybispectra[doc]", "pybispectra[lint]", "pybispectra[test]"]
@@ -65,7 +58,7 @@ show_missing = true
 [tool.coverage.run]
 command_line = "-m pytest -v tests"
 omit = ["__init__.py", "src/pyparrm/utils/_docs.py", "tests/*"]
-source = ["pybispectra"]
+source = ["pyparrm"]
 
 [tool.isort]
 profile = "black"
