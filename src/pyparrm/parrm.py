@@ -3,7 +3,6 @@
 # Author(s):
 #   Thomas Samuel Binns | github.com/tsbinns
 
-from copy import deepcopy
 from multiprocessing import cpu_count
 
 import numpy as np
@@ -123,23 +122,23 @@ class PARRM:
             raise TypeError("`data` must be a NumPy array.")
         if data.ndim != 2:
             raise ValueError("`data` must be a 2D array.")
-        self._data = data.copy()
+        self._data = data
 
         if not isinstance(sampling_freq, (int, float)):
             raise TypeError("`sampling_freq` must be an int or a float.")
         if sampling_freq <= 0:
             raise ValueError("`sampling_freq` must be > 0.")
-        self._sampling_freq = deepcopy(sampling_freq)
+        self._sampling_freq = sampling_freq
 
         if not isinstance(artefact_freq, (int, float)):
             raise TypeError("`artefact_freq` must be an int or a float.")
         if artefact_freq <= 0:
             raise ValueError("`artefact_freq` must be > 0.")
-        self._artefact_freq = deepcopy(artefact_freq)
+        self._artefact_freq = artefact_freq
 
         if not isinstance(verbose, bool):
             raise TypeError("`verbose` must be a bool.")
-        self._verbose = deepcopy(verbose)
+        self._verbose = verbose
 
     def __repr__(self) -> str:  # noqa D107
         return (
@@ -232,7 +231,7 @@ class PARRM:
             raise ValueError(
                 "Entries of `search_samples` must lie in the range [0, n_samples)."
             )
-        self._search_samples = search_samples.copy()
+        self._search_samples = search_samples
 
         if assumed_periods is not None and not isinstance(
             assumed_periods, (int, float, tuple)
@@ -248,18 +247,18 @@ class PARRM:
             raise TypeError(
                 "If a tuple, entries of `assumed_periods` must be ints or floats."
             )
-        self._assumed_periods = deepcopy(assumed_periods)
+        self._assumed_periods = assumed_periods
 
         if not isinstance(outlier_boundary, (int, float)):
             raise TypeError("`outlier_boundary` must be an int or a float.")
         if outlier_boundary <= 0:
             raise ValueError("`outlier_boundary` must be > 0.")
-        self._outlier_boundary = deepcopy(outlier_boundary)
+        self._outlier_boundary = outlier_boundary
 
         if random_seed is not None and not isinstance(random_seed, int):
             raise TypeError("`random_seed` must be an int or None.")
         if random_seed is not None:
-            self._random_seed = deepcopy(random_seed)
+            self._random_seed = random_seed
 
         if not isinstance(n_jobs, int):
             raise TypeError("`n_jobs` must be an int.")
@@ -269,7 +268,7 @@ class PARRM:
             raise ValueError("If `n_jobs` is <= 0, it must be -1.")
         if n_jobs == -1:
             n_jobs = cpu_count()
-        self._n_jobs = deepcopy(n_jobs)
+        self._n_jobs = n_jobs
 
     def _standardise_data(self) -> None:
         """Take derivatives of data, set S.D. to 1, and clip outliers."""
@@ -285,7 +284,7 @@ class PARRM:
         """Optimise artefact period estimate."""
         random_state = np.random.RandomState(self._random_seed)
 
-        estimated_period = deepcopy(self._assumed_periods)
+        estimated_period = self._assumed_periods
 
         opt_sample_lens = np.unique(
             [
@@ -752,7 +751,7 @@ class PARRM:
             raise ValueError(
                 "`omit_n_samples` must lie in the range [0, (no. of samples - 1) // 2)."
             )
-        self._omit_n_samples = deepcopy(omit_n_samples)
+        self._omit_n_samples = omit_n_samples
 
         if period_half_width is None:
             period_half_width = self._period / 50
@@ -762,7 +761,7 @@ class PARRM:
             raise ValueError(
                 "`period_half_width` must be lie in the range (0, period]."
             )
-        self._period_half_width = deepcopy(period_half_width)
+        self._period_half_width = period_half_width
 
         # Must come after `omit_n_samples` and `period_half_width` set!
         if filter_half_width is None:
@@ -776,7 +775,7 @@ class PARRM:
                 "`filter_half_width` must lie in the range (`omit_n_samples`, "
                 "(no. of samples - 1) // 2]."
             )
-        self._filter_half_width = deepcopy(filter_half_width)
+        self._filter_half_width = filter_half_width
 
         if not isinstance(filter_direction, str):
             raise TypeError("`filter_direction` must be a str.")
@@ -785,11 +784,11 @@ class PARRM:
             raise ValueError(
                 f"`filter_direction` must be one of {valid_filter_directions}."
             )
-        self._filter_direction = deepcopy(filter_direction)
+        self._filter_direction = filter_direction
 
     def _get_filter_half_width(self) -> int:
         """Get appropriate `filter_half_width`, if None given."""
-        filter_half_width = deepcopy(self._omit_n_samples)
+        filter_half_width = self._omit_n_samples
         check = 0
         while check < 50 and filter_half_width < (self._n_samples - 1) // 2:
             filter_half_width += 1
@@ -890,29 +889,29 @@ class PARRM:
 
     @property
     def data(self) -> np.ndarray:
-        """Return a copy of the data."""
-        return self._data.copy()
+        """Return the data."""
+        return self._data
 
     @property
     def period(self) -> float:
-        """Return a copy of the estimated stimulation period."""
+        """Return the estimated stimulation period."""
         if self._period is None:
             raise AttributeError("No period has been computed yet.")
-        return deepcopy(self._period)
+        return self._period
 
     @property
     def filter(self) -> np.ndarray:
-        """Return a copy of the PARRM filter."""
+        """Return the PARRM filter."""
         if self._filter is None:
             raise AttributeError("No filter has been computed yet.")
-        return self._filter.copy()
+        return self._filter
 
     @property
     def filtered_data(self) -> np.ndarray:
-        """Return a copy of the most recently filtered data."""
+        """Return the most recently filtered data."""
         if self._filtered_data is None:
             raise AttributeError("No data has been filtered yet.")
-        return deepcopy(self._filtered_data)
+        return self._filtered_data
 
     @property
     def settings(self) -> dict:
