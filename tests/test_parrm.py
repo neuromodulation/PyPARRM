@@ -34,9 +34,7 @@ def test_parrm(n_chans: int, n_samples: int, verbose: bool, n_jobs: int):
         verbose=verbose,
     )
     parrm.find_period(
-        assumed_periods=sampling_freq / artefact_freq,
-        random_seed=44,
-        n_jobs=n_jobs,
+        assumed_periods=sampling_freq / artefact_freq, random_seed=44, n_jobs=n_jobs
     )
     for direction in ["future", "past", "both"]:
         parrm.create_filter(filter_direction=direction)
@@ -88,9 +86,7 @@ def test_parrm_attrs():
     settings = parrm.settings
     assert settings["data"]["sampling_freq"] == sampling_freq
     assert settings["data"]["artefact_freq"] == artefact_freq
-    assert np.all(
-        settings["period"]["search_samples"] == parrm._search_samples
-    )
+    assert np.all(settings["period"]["search_samples"] == parrm._search_samples)
     assert settings["period"]["assumed_periods"] == parrm._assumed_periods
     assert settings["period"]["outlier_boundary"] == parrm._outlier_boundary
     assert settings["period"]["random_seed"] == parrm._random_seed
@@ -107,26 +103,12 @@ def test_parrm_wrong_type_inputs():
     # init object
     with pytest.raises(TypeError, match="`data` must be a NumPy array."):
         PARRM(
-            data=data.tolist(),
-            sampling_freq=sampling_freq,
-            artefact_freq=artefact_freq,
+            data=data.tolist(), sampling_freq=sampling_freq, artefact_freq=artefact_freq
         )
-    with pytest.raises(
-        TypeError, match="`sampling_freq` must be an int or a float."
-    ):
-        PARRM(
-            data=data,
-            sampling_freq=str(sampling_freq),
-            artefact_freq=artefact_freq,
-        )
-    with pytest.raises(
-        TypeError, match="`artefact_freq` must be an int or a float."
-    ):
-        PARRM(
-            data=data,
-            sampling_freq=sampling_freq,
-            artefact_freq=str(artefact_freq),
-        )
+    with pytest.raises(TypeError, match="`sampling_freq` must be an int or a float."):
+        PARRM(data=data, sampling_freq=str(sampling_freq), artefact_freq=artefact_freq)
+    with pytest.raises(TypeError, match="`artefact_freq` must be an int or a float."):
+        PARRM(data=data, sampling_freq=sampling_freq, artefact_freq=str(artefact_freq))
     with pytest.raises(TypeError, match="`verbose` must be a bool."):
         PARRM(
             data=data,
@@ -134,11 +116,7 @@ def test_parrm_wrong_type_inputs():
             artefact_freq=artefact_freq,
             verbose=str(False),
         )
-    parrm = PARRM(
-        data=data,
-        sampling_freq=sampling_freq,
-        artefact_freq=artefact_freq,
-    )
+    parrm = PARRM(data=data, sampling_freq=sampling_freq, artefact_freq=artefact_freq)
 
     # find_period
     with pytest.raises(
@@ -146,22 +124,18 @@ def test_parrm_wrong_type_inputs():
     ):
         parrm.find_period(search_samples=0)
     with pytest.raises(
-        TypeError,
-        match="`assumed_periods` must be an int, a float, a tuple, or None.",
+        TypeError, match="`assumed_periods` must be an int, a float, a tuple, or None."
     ):
         parrm.find_period(assumed_periods=[0])
     with pytest.raises(
-        TypeError,
-        match="If a tuple, entries of `assumed_periods` must be ints or ",
+        TypeError, match="If a tuple, entries of `assumed_periods` must be ints or "
     ):
         parrm.find_period(assumed_periods=tuple(["test"]))
     with pytest.raises(
         TypeError, match="`outlier_boundary` must be an int or a float."
     ):
         parrm.find_period(outlier_boundary=[0])
-    with pytest.raises(
-        TypeError, match="`random_seed` must be an int or None."
-    ):
+    with pytest.raises(TypeError, match="`random_seed` must be an int or None."):
         parrm.find_period(random_seed=1.5)
     with pytest.raises(TypeError, match="`n_jobs` must be an int."):
         parrm.find_period(n_jobs=1.5)
@@ -176,9 +150,7 @@ def test_parrm_wrong_type_inputs():
         TypeError, match="`time_range` must be a list of ints or floats."
     ):
         parrm.explore_filter_params(time_range=[0, "end"])
-    with pytest.raises(
-        TypeError, match="`time_res` must be an int or a float."
-    ):
+    with pytest.raises(TypeError, match="`time_res` must be an int or a float."):
         parrm.explore_filter_params(time_res="all")
     with pytest.raises(
         TypeError, match="`freq_range` must be a list of ints or floats."
@@ -188,9 +160,7 @@ def test_parrm_wrong_type_inputs():
         TypeError, match="`freq_range` must be a list of ints or floats."
     ):
         parrm.explore_filter_params(freq_range=[0, "Nyquist"])
-    with pytest.raises(
-        TypeError, match="`freq_res` must be an int or a float."
-    ):
+    with pytest.raises(TypeError, match="`freq_res` must be an int or a float."):
         parrm.explore_filter_params(freq_res=[0])
     with pytest.raises(TypeError, match="`n_jobs` must be an int."):
         parrm.explore_filter_params(n_jobs=1.5)
@@ -225,36 +195,20 @@ def test_parrm_wrong_value_inputs():
             artefact_freq=artefact_freq,
         )
     with pytest.raises(ValueError, match="`sampling_freq` must be > 0."):
-        PARRM(
-            data=data,
-            sampling_freq=0,
-            artefact_freq=artefact_freq,
-        )
+        PARRM(data=data, sampling_freq=0, artefact_freq=artefact_freq)
     with pytest.raises(ValueError, match="`artefact_freq` must be > 0."):
-        PARRM(
-            data=data,
-            sampling_freq=sampling_freq,
-            artefact_freq=0,
-        )
-    parrm = PARRM(
-        data=data,
-        sampling_freq=sampling_freq,
-        artefact_freq=artefact_freq,
-    )
+        PARRM(data=data, sampling_freq=sampling_freq, artefact_freq=0)
+    parrm = PARRM(data=data, sampling_freq=sampling_freq, artefact_freq=artefact_freq)
 
     # find_period
-    with pytest.raises(
-        ValueError, match="`search_samples` must be a 1D array."
-    ):
+    with pytest.raises(ValueError, match="`search_samples` must be a 1D array."):
         parrm.find_period(search_samples=np.zeros((1, 1)))
     with pytest.raises(
-        ValueError,
-        match="Entries of `search_samples` must lie in the range ",
+        ValueError, match="Entries of `search_samples` must lie in the range "
     ):
         parrm.find_period(search_samples=np.array([-1, 1]))
     with pytest.raises(
-        ValueError,
-        match="Entries of `search_samples` must lie in the range ",
+        ValueError, match="Entries of `search_samples` must lie in the range "
     ):
         parrm.find_period(search_samples=np.array([0, data.shape[1]]))
     with pytest.raises(ValueError, match="`outlier_boundary` must be > 0."):
@@ -263,44 +217,28 @@ def test_parrm_wrong_value_inputs():
         ValueError, match="`n_jobs` must be <= the number of available CPUs."
     ):
         parrm.find_period(n_jobs=cpu_count() + 1)
-    with pytest.raises(
-        ValueError, match="If `n_jobs` is <= 0, it must be -1."
-    ):
+    with pytest.raises(ValueError, match="If `n_jobs` is <= 0, it must be -1."):
         parrm.find_period(n_jobs=-2)
     parrm.find_period()
 
     # explore_filter_params
-    with pytest.raises(
-        ValueError, match="`time_range` must have a length of 2."
-    ):
+    with pytest.raises(ValueError, match="`time_range` must have a length of 2."):
         parrm.explore_filter_params(time_range=[0, 1, 2])
-    with pytest.raises(
-        ValueError, match="`time_range` must lie in the range "
-    ):
+    with pytest.raises(ValueError, match="`time_range` must lie in the range "):
         parrm.explore_filter_params(time_range=[-1, 1])
-    with pytest.raises(
-        ValueError, match="`time_range` must lie in the range "
-    ):
-        parrm.explore_filter_params(
-            time_range=[0, (data.shape[1] / sampling_freq) + 1]
-        )
+    with pytest.raises(ValueError, match="`time_range` must lie in the range "):
+        parrm.explore_filter_params(time_range=[0, (data.shape[1] / sampling_freq) + 1])
     with pytest.raises(ValueError, match="`time_range"):
         parrm.explore_filter_params(time_range=[1, 0])
     with pytest.raises(ValueError, match="`time_res` must lie in the range "):
         parrm.explore_filter_params(time_res=0)
     with pytest.raises(ValueError, match="`time_res` must lie in the range "):
         parrm.explore_filter_params(time_res=data.shape[1] / sampling_freq)
-    with pytest.raises(
-        ValueError, match="`freq_range` must have a length of 2."
-    ):
+    with pytest.raises(ValueError, match="`freq_range` must have a length of 2."):
         parrm.explore_filter_params(freq_range=[0, 1, 2])
-    with pytest.raises(
-        ValueError, match="`freq_range` must lie in the range "
-    ):
+    with pytest.raises(ValueError, match="`freq_range` must lie in the range "):
         parrm.explore_filter_params(freq_range=[-1, 1])
-    with pytest.raises(
-        ValueError, match="`freq_range` must lie in the range "
-    ):
+    with pytest.raises(ValueError, match="`freq_range` must lie in the range "):
         parrm.explore_filter_params(freq_range=[0, (sampling_freq / 2) + 1])
     with pytest.raises(ValueError, match="`freq_range"):
         parrm.explore_filter_params(freq_range=[1, 0])
@@ -312,31 +250,20 @@ def test_parrm_wrong_value_inputs():
         ValueError, match="`n_jobs` must be <= the number of available CPUs."
     ):
         parrm.explore_filter_params(n_jobs=cpu_count() + 1)
-    with pytest.raises(
-        ValueError, match="If `n_jobs` is <= 0, it must be -1."
-    ):
+    with pytest.raises(ValueError, match="If `n_jobs` is <= 0, it must be -1."):
         parrm.explore_filter_params(n_jobs=-2)
 
     # create_filter
-    with pytest.raises(
-        ValueError, match="`filter_half_width` must lie in the range"
-    ):
+    with pytest.raises(ValueError, match="`filter_half_width` must lie in the range"):
         parrm.create_filter(filter_half_width=1, omit_n_samples=2)
-    with pytest.raises(
-        ValueError, match="`filter_half_width` must lie in the range"
-    ):
+    with pytest.raises(ValueError, match="`filter_half_width` must lie in the range"):
         parrm.create_filter(filter_half_width=((data.shape[1] - 1) // 2) + 1)
-    with pytest.raises(
-        ValueError, match="`omit_n_samples` must lie in the range"
-    ):
+    with pytest.raises(ValueError, match="`omit_n_samples` must lie in the range"):
         parrm.create_filter(omit_n_samples=-1)
-    with pytest.raises(
-        ValueError, match="`omit_n_samples` must lie in the range"
-    ):
+    with pytest.raises(ValueError, match="`omit_n_samples` must lie in the range"):
         parrm.create_filter(omit_n_samples=(data.shape[1] - 1) // 2)
     with pytest.raises(
-        ValueError,
-        match="`period_half_width` must be lie in the range ",
+        ValueError, match="`period_half_width` must be lie in the range "
     ):
         parrm.create_filter(period_half_width=0)
     with pytest.raises(
@@ -347,8 +274,7 @@ def test_parrm_wrong_value_inputs():
     with pytest.raises(ValueError, match="`filter_direction` must be one of "):
         parrm.create_filter(filter_direction="not_a_direction")
     with pytest.raises(
-        RuntimeError,
-        match="A suitable filter cannot be created with the specified ",
+        RuntimeError, match="A suitable filter cannot be created with the specified "
     ):
         parrm.create_filter(omit_n_samples=48)
     parrm.create_filter()
@@ -366,38 +292,25 @@ def test_parrm_premature_method_attribute_calls():
         artefact_freq=artefact_freq,
         verbose=False,
     )
-    with pytest.raises(
-        ValueError, match="The period has not yet been estimated."
-    ):
+    with pytest.raises(ValueError, match="The period has not yet been estimated."):
         parrm.explore_filter_params()
-    with pytest.raises(
-        ValueError, match="The period has not yet been estimated."
-    ):
+    with pytest.raises(ValueError, match="The period has not yet been estimated."):
         parrm.create_filter()
-    with pytest.raises(
-        ValueError, match="The filter has not yet been created."
-    ):
+    with pytest.raises(ValueError, match="The filter has not yet been created."):
         parrm.filter_data()
-    with pytest.raises(
-        AttributeError, match="No period has been computed yet."
-    ):
+    with pytest.raises(AttributeError, match="No period has been computed yet."):
         parrm.period
-    with pytest.raises(
-        AttributeError, match="No filter has been computed yet."
-    ):
+    with pytest.raises(AttributeError, match="No filter has been computed yet."):
         parrm.filter
     with pytest.raises(AttributeError, match="No data has been filtered yet."):
         parrm.filtered_data
     with pytest.raises(
-        AttributeError,
-        match="Analysis settings have not been established yet.",
+        AttributeError, match="Analysis settings have not been established yet."
     ):
         parrm.settings
 
     parrm.find_period()
-    with pytest.raises(
-        ValueError, match="The filter has not yet been created."
-    ):
+    with pytest.raises(ValueError, match="The filter has not yet been created."):
         parrm.filter_data()
 
 
@@ -424,10 +337,7 @@ def test_compute_psd(n_chans: int, n_jobs: int):
 
     n_freqs = 5
     freqs, psd = compute_psd(
-        data=data,
-        sampling_freq=sampling_freq,
-        n_points=n_freqs * 2,
-        n_jobs=n_jobs,
+        data=data, sampling_freq=sampling_freq, n_points=n_freqs * 2, n_jobs=n_jobs
     )
 
     assert psd.shape == (n_chans, n_freqs)
@@ -454,9 +364,7 @@ def test_get_example_data_paths() -> None:
     for name, file in DATASETS.items():
         path = get_example_data_paths(name=name)
         assert isinstance(path, str), "`path` should be a str."
-        assert path.endswith(
-            file
-        ), "`path` should end with the name of the dataset."
+        assert path.endswith(file), "`path` should end with the name of the dataset."
         assert os.path.exists(path), "`path` should point to an existing file."
 
     # test it catches incorrect inputs
