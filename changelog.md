@@ -1,6 +1,6 @@
 # PyPARRM Changelog
 
-## [Version 1.1.1dev](https://pyparrm.readthedocs.io/en/main/index.html)
+## [Version 1.2.0dev](https://pyparrm.readthedocs.io/en/main/index.html)
 
 ##### Enhancements
 - Updated test coverage.
