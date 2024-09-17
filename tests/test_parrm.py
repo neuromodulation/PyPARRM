@@ -283,7 +283,7 @@ def test_parrm_wrong_value_inputs():
 
     # filter_data
     with pytest.raises(ValueError, match="`data` must be a 2D array."):
-        parrm.filter_data(data=random.rand(100))
+        parrm.filter_data(data=random.standard_normal((100,)))
 
 
 def test_parrm_premature_method_attribute_calls():
