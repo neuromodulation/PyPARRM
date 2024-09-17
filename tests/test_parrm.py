@@ -46,7 +46,10 @@ def test_parrm(
         search_samples = np.arange(0, n_samples * search_samples_proportion)
 
     parrm.find_period(
-        assumed_periods=sampling_freq / artefact_freq, random_seed=44, n_jobs=n_jobs
+        search_samples=search_samples,
+        assumed_periods=sampling_freq / artefact_freq,
+        random_seed=44,
+        n_jobs=n_jobs,
     )
     for direction in ["future", "past", "both"]:
         parrm.create_filter(filter_direction=direction)
