@@ -3,7 +3,6 @@
 # Author(s):
 #   Thomas Samuel Binns | github.com/tsbinns
 
-from copy import deepcopy
 from multiprocessing import cpu_count
 
 from matplotlib import pyplot as plt
@@ -112,7 +111,7 @@ class _ExploreParams:
             "PyPARRM Internal Error: `_ParamSelection` should only be called if the "
             "period has been estimated. Please contact the PyPARRM developers."
         )
-        self.parrm = deepcopy(parrm)
+        self.parrm = parrm
         self.parrm._verbose = False
 
         # time_range
@@ -163,14 +162,14 @@ class _ExploreParams:
             )
         if freq_range[0] >= freq_range[1]:
             raise ValueError("`freq_range[1]` must be > `freq_range[0]`.")
-        self.freq_range = deepcopy(freq_range)
+        self.freq_range = freq_range
 
         # freq_res
         if not isinstance(freq_res, (int, float)):
             raise TypeError("`freq_res` must be an int or a float.")
         if freq_res <= 0 or freq_res > self.parrm._sampling_freq / 2:
             raise ValueError("`freq_res` must lie in the range (0, Nyquist frequency].")
-        self.freq_res = deepcopy(freq_res)
+        self.freq_res = freq_res
 
         # n_jobs
         if not isinstance(n_jobs, int):
@@ -181,7 +180,7 @@ class _ExploreParams:
             raise ValueError("If `n_jobs` is <= 0, it must be -1.")
         if n_jobs == -1:
             n_jobs = cpu_count()
-        self.n_jobs = deepcopy(n_jobs)
+        self.n_jobs = n_jobs
 
         self.parrm._check_sort_create_filter_inputs(None, 0, "both", None)
         self.current_period_half_width = self.parrm._period_half_width
