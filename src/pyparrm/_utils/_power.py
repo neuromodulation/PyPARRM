@@ -25,12 +25,12 @@ def compute_psd(
         Sampling frequency, in Hz, of `data`.
 
     n_points : int
-        Number of points to use when computing the Fourier coefficients. Should
-        be double the desired number of frequencies in the power spectra.
+        Number of points to use when computing the Fourier coefficients. Should be
+        double the desired number of frequencies in the power spectra.
 
     max_freq : int | float | None (default None)
-        The maximum frequency that should be returned. If :obj:`None`, values
-        for all computed frequencies returned.
+        The maximum frequency that should be returned. If :obj:`None`, values for all
+        computed frequencies returned.
 
     n_jobs : int (default ``1``)
         Number of jobs to run in parallel.
@@ -49,12 +49,10 @@ def compute_psd(
 
     Data is converted to, and power is returned as, float32 values for speed.
 
-    As `data` is assumed to be real-valued, only positive frequencies are
-    returned. The zero frequency is also discarded.
+    As `data` is assumed to be real-valued, only positive frequencies are returned. The
+    zero frequency is also discarded.
     """
-    freqs = np.abs(
-        fftfreq(n_points, 1.0 / sampling_freq)[1 : (n_points // 2) + 1]
-    )
+    freqs = np.abs(fftfreq(n_points, 1.0 / sampling_freq)[1 : (n_points // 2) + 1])
     if max_freq is None:
         max_freq = freqs[-1]
     max_freq_i = np.argwhere(freqs <= max_freq)[-1][0]
