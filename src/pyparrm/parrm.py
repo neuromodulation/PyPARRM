@@ -282,7 +282,7 @@ class PARRM:
 
     def _optimise_period_estimate(self) -> None:
         """Optimise artefact period estimate."""
-        random_state = np.random.RandomState(self._random_seed)
+        random_state = np.random.default_rng(self._random_seed)
 
         estimated_period = self._assumed_periods
 
@@ -329,7 +329,7 @@ class PARRM:
         self,
         use_n_samples: int,
         ignore_portion: float,
-        random_state: np.random.RandomState,
+        random_state: np.random.Generator,
     ) -> np.ndarray:
         """Get indices for samples in the centre of the data segment.
 
@@ -341,7 +341,7 @@ class PARRM:
         ignore_portion : float
             Portion of the data segment to ignore when getting the indices.
 
-        random_state : numpy.random.RandomState
+        random_state : numpy.random.Generator
             Random state object to use to generate numbers if the available number of
             samples is less than that requested.
 
@@ -367,7 +367,7 @@ class PARRM:
         )
         return (
             np.unique(
-                random_state.randint(
+                random_state.integers(
                     0, end_idx - start_idx, np.min((use_n_samples, end_idx - start_idx))
                 )
             )
