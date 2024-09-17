@@ -1,6 +1,8 @@
 API
 ===
 
+Here are the API references for PyPARRM.
+
 .. container:: d-none
 
     :py:mod:`pyparrm`:
