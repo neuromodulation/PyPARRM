@@ -8,7 +8,7 @@ install it using pip:
     
     pip install pyparrm
 
-PyBispectra requires Python >= 3.10.
+PyPARRM requires Python >= 3.10.
 
 If you need to create an environment in which to install PyPARRM, you can do so using
 `conda <https://docs.conda.io/en/latest/>`_, after which you can install the package:
