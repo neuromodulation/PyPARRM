@@ -2,16 +2,16 @@
     {
         "name": "1.2.0dev",
         "version": "1.2.0dev",
-        "url": "https://pyparrm.readthedocs.io/en/main/"
+        "url": "https://pyparrm.readthedocs.io/main/"
     },
     {
         "name": "1.1.0",
         "version": "1.1.0",
-        "url": "https://pyparrm.readthedocs.io/en/1.1.0/"
+        "url": "https://pyparrm.readthedocs.io/1.1.0/"
     },
     {
         "name": "1.0.0",
         "version": "1.0.0",
-        "url": "https://pyparrm.readthedocs.io/en/1.0.0/"
+        "url": "https://pyparrm.readthedocs.io/1.0.0/"
     }
 ]
