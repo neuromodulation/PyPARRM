@@ -18,7 +18,7 @@ artefact_freq = 10  # Hz
 @pytest.mark.parametrize("n_samples", [100, 300, 25000])
 @pytest.mark.parametrize("search_samples_proportion", [None, 0.5])
 @pytest.mark.parametrize("verbose", [True, False])
-@pytest.mark.parametrize("n_jobs", [1, -1])
+@pytest.mark.parametrize("n_jobs", [1, 2])
 def test_parrm(
     n_chans: int,
     n_samples: int,

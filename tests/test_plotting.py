@@ -32,7 +32,7 @@ parrm.find_period(assumed_periods=sampling_freq / artefact_freq, random_seed=44)
 
 @pytest.mark.parametrize("time_range", [None, [1.0, 15.0]])
 @pytest.mark.parametrize("freq_range", [None, [5.0, 25.0]])
-@pytest.mark.parametrize("n_jobs", [1, -1])
+@pytest.mark.parametrize("n_jobs", [1, 2])
 def test_explore_params(
     time_range: list[float] | None, freq_range: list[float] | None, n_jobs: int
 ) -> None:

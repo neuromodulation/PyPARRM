@@ -17,7 +17,7 @@ artefact_freq = 10  # Hz
 
 
 @pytest.mark.parametrize("n_chans", [1, 2])
-@pytest.mark.parametrize("n_jobs", [1, -1])
+@pytest.mark.parametrize("n_jobs", [1, 2])
 def test_compute_psd(n_chans: int, n_jobs: int) -> None:
     """Test that PSD computation runs."""
     random = np.random.default_rng(44)
