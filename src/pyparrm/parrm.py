@@ -1,7 +1,7 @@
 """Tools for fitting PARRM filters to data."""
 
 # Author(s):
-#   Thomas Samuel Binns | github.com/tsbinns
+#   Thomas S. Binns | github.com/tsbinns
 
 from multiprocessing import cpu_count
 
@@ -634,9 +634,9 @@ class PARRM:
 
     def explore_filter_params(
         self,
-        time_range: list[int] | None = None,
+        time_range: list[int | float] | None = None,
         time_res: int | float = 0.01,
-        freq_range: list[int] | None = None,
+        freq_range: list[int | float] | None = None,
         freq_res: int | float = 5.0,
         n_jobs: int = 1,
     ) -> None:

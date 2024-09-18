@@ -1,8 +1,9 @@
 """Tools for plotting results."""
 
 # Author(s):
-#   Thomas Samuel Binns | github.com/tsbinns
+#   Thomas S. Binns | github.com/tsbinns
 
+from copy import deepcopy
 from multiprocessing import cpu_count
 
 from matplotlib import pyplot as plt
@@ -108,10 +109,10 @@ class _ExploreParams:
     ) -> None:
         """Check and sort init. inputs."""
         assert parrm._period is not None, (
-            "PyPARRM Internal Error: `_ParamSelection` should only be called if the "
+            "PyPARRM Internal Error: `_ExploreParams` should only be called if the "
             "period has been estimated. Please contact the PyPARRM developers."
         )
-        self.parrm = parrm
+        self.parrm = deepcopy(parrm)
         self.parrm._verbose = False
 
         # time_range
@@ -297,7 +298,7 @@ class _ExploreParams:
             layout="constrained",
         )
         axes["lower inner"].remove()
-        self.figure.set_constrained_layout_pads(w_pad=0.05, h_pad=0.1)
+        self.figure.get_layout_engine().set(w_pad=0.05, h_pad=0.1)
         self.figure.suptitle("placeholder\n")  # smaller title, less space
         self.figure.canvas.draw()  # set basic layout
         self._update_suptitle()  # set bigger title, but don't redraw!
