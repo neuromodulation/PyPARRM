@@ -65,6 +65,12 @@ profile = "black"
 [tool.pydocstyle]
 match-dir = "^(?!(examples|docs|tests)).*"
 
+[tool.pytest.ini_options]
+# use '', not "" for escaping characters in regex
+filterwarnings = [
+  "ignore:FigureCanvasAgg is non-interactive, and thus cannot be shown:UserWarning",
+]
+
 [tool.rstcheck]
 ignore_directives = [
   "autoclass",
