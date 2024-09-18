@@ -3,25 +3,29 @@
 # Author(s):
 #   Thomas Samuel Binns | github.com/tsbinns
 
-import os
 from multiprocessing import cpu_count
 
 import numpy as np
 import pytest
 
-from pyparrm import get_example_data_paths, PARRM
-from pyparrm.data import DATASETS
-from pyparrm._utils._power import compute_psd
+from pyparrm import PARRM
 
 sampling_freq = 20  # Hz
 artefact_freq = 10  # Hz
 
 
 @pytest.mark.parametrize("n_chans", [1, 2])
-@pytest.mark.parametrize("n_samples", [100, 300])
+@pytest.mark.parametrize("n_samples", [100, 300, 25000])
+@pytest.mark.parametrize("search_samples_proportion", [None, 0.5])
 @pytest.mark.parametrize("verbose", [True, False])
-@pytest.mark.parametrize("n_jobs", [1, -1])
-def test_parrm(n_chans: int, n_samples: int, verbose: bool, n_jobs: int):
+@pytest.mark.parametrize("n_jobs", [1, 2])
+def test_parrm(
+    n_chans: int,
+    n_samples: int,
+    search_samples_proportion: float | None,
+    verbose: bool,
+    n_jobs: int,
+) -> None:
     """Test that PARRM can run."""
     random = np.random.default_rng(44)
     data = random.standard_normal((n_chans, n_samples))
@@ -32,8 +36,17 @@ def test_parrm(n_chans: int, n_samples: int, verbose: bool, n_jobs: int):
         artefact_freq=artefact_freq,
         verbose=verbose,
     )
+
+    if search_samples_proportion is None:
+        search_samples = None
+    else:
+        search_samples = np.arange(0, n_samples * search_samples_proportion)
+
     parrm.find_period(
-        assumed_periods=sampling_freq / artefact_freq, random_seed=44, n_jobs=n_jobs
+        search_samples=search_samples,
+        assumed_periods=sampling_freq / artefact_freq,
+        random_seed=44,
+        n_jobs=n_jobs,
     )
     for direction in ["future", "past", "both"]:
         parrm.create_filter(filter_direction=direction)
@@ -55,7 +68,7 @@ def test_parrm(n_chans: int, n_samples: int, verbose: bool, n_jobs: int):
         assert parrm._n_jobs == cpu_count()
 
 
-def test_parrm_attrs():
+def test_parrm_attrs() -> None:
     """Test that attributes returned from PARRM are correct.
 
     The returned attributes should simply be a copy of their private
@@ -96,7 +109,7 @@ def test_parrm_attrs():
     assert settings["filter"]["period_half_width"] == parrm._period_half_width
 
 
-def test_parrm_wrong_type_inputs():
+def test_parrm_wrong_type_inputs() -> None:
     """Test that inputs of wrong types to PARRM are caught."""
     random = np.random.default_rng(44)
     data = random.standard_normal((1, 100))
@@ -184,7 +197,7 @@ def test_parrm_wrong_type_inputs():
         parrm.filter_data(data=data.tolist())
 
 
-def test_parrm_wrong_value_inputs():
+def test_parrm_wrong_value_inputs() -> None:
     """Test that inputs of wrong values to PARRM are caught."""
     random = np.random.default_rng(44)
     data = random.standard_normal((1, 100))
@@ -286,7 +299,7 @@ def test_parrm_wrong_value_inputs():
         parrm.filter_data(data=random.standard_normal((100,)))
 
 
-def test_parrm_premature_method_attribute_calls():
+def test_parrm_premature_method_attribute_calls() -> None:
     """Test that errors raised for PARRM methods/attrs. called prematurely."""
     random = np.random.default_rng(44)
     parrm = PARRM(
@@ -317,7 +330,7 @@ def test_parrm_premature_method_attribute_calls():
         parrm.filter_data()
 
 
-def test_parrm_missing_filter_inputs():
+def test_parrm_missing_filter_inputs() -> None:
     """Test that PARRM can compute values for missing filter inputs."""
     random = np.random.default_rng(44)
     parrm = PARRM(
@@ -331,47 +344,3 @@ def test_parrm_missing_filter_inputs():
 
     assert parrm._filter_half_width is not None
     assert parrm._period_half_width is not None
-
-
-@pytest.mark.parametrize("n_chans", [1, 2])
-@pytest.mark.parametrize("n_jobs", [1, 2])
-def test_compute_psd(n_chans: int, n_jobs: int):
-    """Test that PSD computation runs."""
-    random = np.random.default_rng(44)
-    data = random.standard_normal((n_chans, 100))
-
-    n_freqs = 5
-    freqs, psd = compute_psd(
-        data=data, sampling_freq=sampling_freq, n_points=n_freqs * 2, n_jobs=n_jobs
-    )
-
-    assert psd.shape == (n_chans, n_freqs)
-    assert freqs.shape[0] == psd.shape[1]
-    assert isinstance(freqs, np.ndarray)
-    assert isinstance(psd, np.ndarray)
-
-    max_freq = (sampling_freq / 2) - ((sampling_freq / 2) / n_freqs)
-    freqs, psd = compute_psd(
-        data=data,
-        sampling_freq=sampling_freq,
-        n_points=n_freqs * 2,
-        max_freq=max_freq,
-        n_jobs=n_jobs,
-    )
-
-    assert freqs.shape[0] == psd.shape[1]
-    assert freqs[-1] == max_freq
-
-
-def test_get_example_data_paths() -> None:
-    """Test `get_example_data_paths`."""
-    # test it works with correct inputs
-    for name, file in DATASETS.items():
-        path = get_example_data_paths(name=name)
-        assert isinstance(path, str), "`path` should be a str."
-        assert path.endswith(file), "`path` should end with the name of the dataset."
-        assert os.path.exists(path), "`path` should point to an existing file."
-
-    # test it catches incorrect inputs
-    with pytest.raises(ValueError, match="`name` must be one of"):
-        get_example_data_paths(name="not_a_name")

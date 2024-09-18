@@ -1,7 +1,7 @@
 """Tools for computing signal power."""
 
 # Author(s):
-#   Thomas Samuel Binns | github.com/tsbinns
+#   Thomas S. Binns | github.com/tsbinns
 
 import numpy as np
 from scipy.fft import fft, fftfreq  # faster than numpy for real-valued inputs
