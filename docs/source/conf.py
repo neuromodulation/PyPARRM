@@ -14,7 +14,7 @@ from pyparrm._utils._docs import linkcode_resolve
 
 
 project = "PyPARRM"
-copyright = "2023, Thomas S. Binns"
+copyright = "2023-2026, Thomas S. Binns"
 author = "Thomas S. Binns"
 release = "1.2.0dev"
 
