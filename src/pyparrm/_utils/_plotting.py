@@ -6,9 +6,9 @@
 from copy import deepcopy
 from multiprocessing import cpu_count
 
+import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.widgets import RadioButtons, TextBox
-import numpy as np
 
 from pyparrm._utils._power import compute_psd
 
@@ -88,9 +88,9 @@ class _ExploreParams:
         self,
         parrm,
         time_range: list[int | float] | None = None,
-        time_res: int | float = 0.01,
+        time_res: float = 0.01,
         freq_range: list[int | float] | None = None,
-        freq_res: int | float = 5.0,
+        freq_res: float = 5.0,
         n_jobs: int = 1,
     ) -> None:
         self._check_sort_init_inputs(
@@ -102,9 +102,9 @@ class _ExploreParams:
         self,
         parrm,
         time_range: list[int | float] | None,
-        time_res: int | float,
+        time_res: float,
         freq_range: list[int | float] | None,
-        freq_res: int | float,
+        freq_res: float,
         n_jobs: int,
     ) -> None:
         """Check and sort init. inputs."""

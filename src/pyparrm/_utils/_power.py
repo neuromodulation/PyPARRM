@@ -11,7 +11,7 @@ def compute_psd(
     data: np.ndarray,
     sampling_freq: int,
     n_points: int,
-    max_freq: int | float | None = None,
+    max_freq: float | None = None,
     n_jobs: int = 1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Compute power spectral density of data.

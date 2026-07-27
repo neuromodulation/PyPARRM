@@ -23,7 +23,7 @@ def get_example_data_paths(name: str) -> str:
     path : str
         Path to the example data.
     """
-    if name not in DATASETS.keys():
+    if name not in DATASETS:
         raise ValueError(f"`name` must be one of: {list(DATASETS.keys())}")
 
     filepath_upper = Path(os.path.abspath(__file__)).parent
