@@ -142,7 +142,7 @@ class PARRM:
     def __repr__(self) -> str:
         return (
             f"PARRM object | Data: ({self._n_chans} channels x "
-            f"{self._n_samples} times) | Period: {self._period :.4f}"
+            f"{self._n_samples} times) | Period: {self._period:.4f}"
         )
 
     def find_period(
@@ -239,9 +239,9 @@ class PARRM:
                 "`assumed_periods` must be an int, a float, a tuple, or None."
             )
         if assumed_periods is None:
-            assumed_periods = tuple([self._sampling_freq / self._artefact_freq])
+            assumed_periods = (self._sampling_freq / self._artefact_freq,)
         elif isinstance(assumed_periods, (int, float)):
-            assumed_periods = tuple([assumed_periods])
+            assumed_periods = (assumed_periods,)
         elif not all(isinstance(entry, (int, float)) for entry in assumed_periods):
             raise TypeError(
                 "If a tuple, entries of `assumed_periods` must be ints or floats."
@@ -519,7 +519,7 @@ class PARRM:
             periods[iter_idx] = output[iter_idx][0][0]
             fit_errors[iter_idx] = output[iter_idx][1]
 
-        return tuple([periods[fit_errors.argmin()]])
+        return (periods[fit_errors.argmin()],)
 
     def _optimise_period_estimate_final_run(
         self, period: float, indices: np.ndarray, bandwidth: int

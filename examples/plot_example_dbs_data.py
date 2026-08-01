@@ -98,9 +98,9 @@ filtered_ecog = parrm_ecog.filter_data()
 filtered_lfp = parrm_lfp.filter_data()
 
 print(
-    f"Artefact period (ECoG & LFP): {parrm.period :.7f}\n"
-    f"Artefact period (only ECoG):  {parrm_ecog.period :.7f}\n"
-    f"Artefact period (only LFP):   {parrm_lfp.period :.7f}"
+    f"Artefact period (ECoG & LFP): {parrm.period:.7f}\n"
+    f"Artefact period (only ECoG):  {parrm_ecog.period:.7f}\n"
+    f"Artefact period (only LFP):   {parrm_lfp.period:.7f}"
 )
 
 ########################################################################################
@@ -139,11 +139,12 @@ _, psd_filtered_lfp = compute_psd(filtered_lfp, sampling_freq, int(n_freqs * 2))
 
 fig = plt.figure(figsize=(12, 8), layout="constrained")
 subfigs = fig.subfigures(2, 1, hspace=0.07)
-data_idx = 0
-for data_name, filtered_data, filtered_psd in zip(
-    ["ECoG", "LFP"],
-    np.concatenate((filtered_ecog, filtered_lfp)),
-    np.concatenate((psd_filtered_ecog, psd_filtered_lfp)),
+for data_idx, (data_name, filtered_data, filtered_psd) in enumerate(
+    zip(
+        ["ECoG", "LFP"],
+        np.concatenate((filtered_ecog, filtered_lfp)),
+        np.concatenate((psd_filtered_ecog, psd_filtered_lfp)),
+    )
 ):
     axes = subfigs[data_idx].subplots(1, 2)
     inset_axis_time = axes[0].inset_axes((0.15, 0.12, 0.8, 0.4))
@@ -193,8 +194,6 @@ for data_name, filtered_data, filtered_psd in zip(
     axes[1].legend(loc="upper left")
     axes[1].set_xlabel("Log frequency (Hz)")
     axes[1].set_ylabel("Log power (dB/Hz)")
-
-    data_idx += 1
 
 fig.show()
 

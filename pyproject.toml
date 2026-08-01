@@ -117,7 +117,7 @@ ignore_roles = [
 report_level = "WARNING"
 
 [tool.ruff]
-extend-exclude = ["docs"]
+extend-exclude = ["docs", "src/pyparrm/_utils/_docs.py"]
 line-length = 88
 
 [tool.ruff.lint.per-file-ignores]
