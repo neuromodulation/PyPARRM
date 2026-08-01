@@ -148,7 +148,7 @@ class PARRM:
     def find_period(
         self,
         search_samples: np.ndarray | None = None,
-        assumed_periods: float | tuple[int | float] | None = None,
+        assumed_periods: float | tuple[float] | None = None,
         outlier_boundary: float = 3.0,
         random_seed: int | None = None,
         n_jobs: int = 1,
@@ -213,7 +213,7 @@ class PARRM:
     def _check_sort_find_stim_period_inputs(
         self,
         search_samples: np.ndarray | None,
-        assumed_periods: float | tuple[int | float] | None,
+        assumed_periods: float | tuple[float] | None,
         outlier_boundary: float,
         random_seed: int | None,
         n_jobs: int,
@@ -633,9 +633,9 @@ class PARRM:
 
     def explore_filter_params(
         self,
-        time_range: list[int | float] | None = None,
+        time_range: list[float] | None = None,
         time_res: float = 0.01,
-        freq_range: list[int | float] | None = None,
+        freq_range: list[float] | None = None,
         freq_res: float = 5.0,
         n_jobs: int = 1,
     ) -> None:
