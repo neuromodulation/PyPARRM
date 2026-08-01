@@ -6,9 +6,9 @@
 from copy import deepcopy
 from multiprocessing import cpu_count
 
+import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.widgets import RadioButtons, TextBox
-import numpy as np
 
 from pyparrm._utils._power import compute_psd
 
@@ -87,10 +87,10 @@ class _ExploreParams:
     def __init__(
         self,
         parrm,
-        time_range: list[int | float] | None = None,
-        time_res: int | float = 0.01,
-        freq_range: list[int | float] | None = None,
-        freq_res: int | float = 5.0,
+        time_range: list[float] | None = None,
+        time_res: float = 0.01,
+        freq_range: list[float] | None = None,
+        freq_res: float = 5.0,
         n_jobs: int = 1,
     ) -> None:
         self._check_sort_init_inputs(
@@ -101,10 +101,10 @@ class _ExploreParams:
     def _check_sort_init_inputs(
         self,
         parrm,
-        time_range: list[int | float] | None,
-        time_res: int | float,
-        freq_range: list[int | float] | None,
-        freq_res: int | float,
+        time_range: list[float] | None,
+        time_res: float,
+        freq_range: list[float] | None,
+        freq_res: float,
         n_jobs: int,
     ) -> None:
         """Check and sort init. inputs."""
@@ -232,7 +232,7 @@ class _ExploreParams:
             half_width = float(half_width)
             half_width = np.max((half_width, self.period_half_width_limits[0]))
             half_width = np.min((half_width, self.period_half_width_limits[1]))
-            self.textbox_period_half_width.set_val(f"{half_width :.3f}")
+            self.textbox_period_half_width.set_val(f"{half_width:.3f}")
             self.current_period_half_width = half_width
 
             self._update_sample_period_focused_xlim_width(half_width)
@@ -404,13 +404,13 @@ class _ExploreParams:
         if self.largest_sample_period_xvals.min() == 0:
             period_lower_lim = "0"
         else:
-            period_lower_lim = f"{self.period_half_width_limits[0] :.3f}"
+            period_lower_lim = f"{self.period_half_width_limits[0]:.3f}"
 
         self.textbox_period_half_width = TextBox(
             self.figure.add_axes((0.32, 0.14, 0.15, 0.03)),
             f"Period half-width [{period_lower_lim} - "
-            f"{self.period_half_width_limits[1] :.3f}]:",
-            f"{self.current_period_half_width :.3f}",
+            f"{self.period_half_width_limits[1]:.3f}]:",
+            f"{self.current_period_half_width:.3f}",
             textalignment="center",
         )
 

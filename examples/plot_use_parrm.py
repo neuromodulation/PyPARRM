@@ -16,7 +16,7 @@ PyPARRM package.
 import numpy as np
 from matplotlib import pyplot as plt
 
-from pyparrm import get_example_data_paths, PARRM
+from pyparrm import PARRM, get_example_data_paths
 from pyparrm._utils._power import compute_psd
 
 ########################################################################################

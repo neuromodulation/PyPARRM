@@ -12,7 +12,6 @@ from scipy.signal import convolve  # faster than convolve2d
 
 from pyparrm._utils._plotting import _ExploreParams
 
-
 np.seterr(all="ignore")  # ignore zero division error
 
 
@@ -103,18 +102,18 @@ class PARRM:
     def __init__(
         self,
         data: np.ndarray,
-        sampling_freq: int | float,
-        artefact_freq: int | float,
+        sampling_freq: float,
+        artefact_freq: float,
         verbose: bool = True,
-    ) -> None:  # noqa D107
+    ) -> None:
         self._check_init_inputs(data, sampling_freq, artefact_freq, verbose)
         self._n_chans, self._n_samples = self._data.shape
 
     def _check_init_inputs(
         self,
         data: np.ndarray,
-        sampling_freq: int | float,
-        artefact_freq: int | float,
+        sampling_freq: float,
+        artefact_freq: float,
         verbose: bool,
     ) -> None:
         """Check initialisation inputs to object."""
@@ -140,17 +139,17 @@ class PARRM:
             raise TypeError("`verbose` must be a bool.")
         self._verbose = verbose
 
-    def __repr__(self) -> str:  # noqa D107
+    def __repr__(self) -> str:
         return (
             f"PARRM object | Data: ({self._n_chans} channels x "
-            f"{self._n_samples} times) | Period: {self._period :.4f}"
+            f"{self._n_samples} times) | Period: {self._period:.4f}"
         )
 
     def find_period(
         self,
         search_samples: np.ndarray | None = None,
-        assumed_periods: int | float | tuple[int | float] | None = None,
-        outlier_boundary: int | float = 3.0,
+        assumed_periods: float | tuple[float] | None = None,
+        outlier_boundary: float = 3.0,
         random_seed: int | None = None,
         n_jobs: int = 1,
     ) -> None:
@@ -178,7 +177,7 @@ class PARRM:
             Number of jobs to run in parallel when optimising the period estimates. Must
             lie in the range ``[1, number of CPUs]`` (unless it is ``-1``, in which case
             all available CPUs are used).
-        """  # noqa E501
+        """
         if self._verbose:
             print("\nFinding the artefact period...")
 
@@ -214,8 +213,8 @@ class PARRM:
     def _check_sort_find_stim_period_inputs(
         self,
         search_samples: np.ndarray | None,
-        assumed_periods: int | float | tuple[int | float] | None,
-        outlier_boundary: int | float,
+        assumed_periods: float | tuple[float] | None,
+        outlier_boundary: float,
         random_seed: int | None,
         n_jobs: int,
     ) -> None:
@@ -240,9 +239,9 @@ class PARRM:
                 "`assumed_periods` must be an int, a float, a tuple, or None."
             )
         if assumed_periods is None:
-            assumed_periods = tuple([self._sampling_freq / self._artefact_freq])
+            assumed_periods = (self._sampling_freq / self._artefact_freq,)
         elif isinstance(assumed_periods, (int, float)):
-            assumed_periods = tuple([assumed_periods])
+            assumed_periods = (assumed_periods,)
         elif not all(isinstance(entry, (int, float)) for entry in assumed_periods):
             raise TypeError(
                 "If a tuple, entries of `assumed_periods` must be ints or floats."
@@ -520,7 +519,7 @@ class PARRM:
             periods[iter_idx] = output[iter_idx][0][0]
             fit_errors[iter_idx] = output[iter_idx][1]
 
-        return tuple([periods[fit_errors.argmin()]])
+        return (periods[fit_errors.argmin()],)
 
     def _optimise_period_estimate_final_run(
         self, period: float, indices: np.ndarray, bandwidth: int
@@ -634,10 +633,10 @@ class PARRM:
 
     def explore_filter_params(
         self,
-        time_range: list[int | float] | None = None,
-        time_res: int | float = 0.01,
-        freq_range: list[int | float] | None = None,
-        freq_res: int | float = 5.0,
+        time_range: list[float] | None = None,
+        time_res: float = 0.01,
+        freq_range: list[float] | None = None,
+        freq_res: float = 5.0,
         n_jobs: int = 1,
     ) -> None:
         """Create an interactive plot to explore filter parameters.
@@ -692,7 +691,7 @@ class PARRM:
         filter_half_width: int | None = None,
         omit_n_samples: int = 0,
         filter_direction: str = "both",
-        period_half_width: int | float | None = None,
+        period_half_width: float | None = None,
     ) -> None:
         """Create the PARRM filter for removing the stimulation artefacts.
 
@@ -742,7 +741,7 @@ class PARRM:
         filter_half_width: int,
         omit_n_samples: int,
         filter_direction: str,
-        period_half_width: int | float,
+        period_half_width: float,
     ) -> None:
         """Check and sort `create_filter` inputs."""
         if not isinstance(omit_n_samples, int):
